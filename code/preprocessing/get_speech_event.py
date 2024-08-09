@@ -156,9 +156,10 @@ def epoche_speech_event(speech_data_df, epoched_location):
                     continue
                 if ring_idx >= 90:
                     epoched_speech_event_df.at[i,f'{role.lower()}Speech'] = temp_speech_event[ring_idx-90:ring_idx]
-
-   
+    
     return epoched_speech_event_df.dropna().reset_index(drop=True)
+
+
 def main():
     path = '../../data'
     pd.set_option('display.max_columns', None)
