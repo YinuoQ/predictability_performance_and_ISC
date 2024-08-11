@@ -618,56 +618,59 @@ if __name__ == '__main__':
     path = '../../data/raw_xdf'
     pd.set_option('display.max_columns', None)
     downsample_epoch = False
-    raw_eeg = pd.DataFrame()
+    # raw_eeg = pd.DataFrame()
     # raw_location = pd.DataFrame()
     # raw_audio = pd.DataFrame()
     # raw_pupilsize = pd.DataFrame()
     # raw_openness = pd.DataFrame()
-    for file_name in tqdm(os.listdir(path)):
-        if not file_name.startswith('.'):
-            print(file_name)
-            if int(file_name.split("_")[0][1:]) < 14:
-                continue
-            full_path = os.path.join(path, file_name)
-            target_file = glob.glob(os.path.join(full_path, '*.xdf'))
-            if len(target_file) > 1:
-                all_data = merge_xdf(target_file, file_name.split('_'))
-            else:
-                try:
-                    temp_xdf = read_xdf(target_file[0])
-                    all_data = remove_cache_data(temp_xdf, file_name.split('_'))
-                except:
-                    print('error exist in')
-                    print(file_name)
-            raw_eeg = pd.concat([raw_eeg, all_data.loc[all_data['modality'] == 'EEG']])
-            # raw_location = pd.concat([raw_location, all_data.loc[all_data['modality'] == 'Location']])
-            # raw_audio = pd.concat([raw_audio, all_data.loc[all_data['modality'] == 'Audio']])
-            # raw_pupilsize = pd.concat([raw_pupilsize, all_data.loc[all_data['modality'] == 'PupilSize']])
-            # raw_openness = pd.concat([raw_openness, all_data.loc[all_data['modality'] == 'Openness']])
 
-    raw_eeg = sort_data_frame(raw_eeg)
+    # for file_name in tqdm(os.listdir(path)):
+    #     if not file_name.startswith('.'):
+    #         print(file_name)
+    #         if int(file_name.split("_")[0][1:]) < 14:
+    #             continue
+    #         full_path = os.path.join(path, file_name)
+    #         target_file = glob.glob(os.path.join(full_path, '*.xdf'))
+    #         if len(target_file) > 1:
+    #             all_data = merge_xdf(target_file, file_name.split('_'))
+    #         else:
+    #             try:
+    #                 temp_xdf = read_xdf(target_file[0])
+    #                 all_data = remove_cache_data(temp_xdf, file_name.split('_'))
+    #             except:
+    #                 print('error exist in')
+    #                 print(file_name)
+    #         raw_eeg = pd.concat([raw_eeg, all_data.loc[all_data['modality'] == 'EEG']])
+    #         raw_location = pd.concat([raw_location, all_data.loc[all_data['modality'] == 'Location']])
+    #         raw_audio = pd.concat([raw_audio, all_data.loc[all_data['modality'] == 'Audio']])
+    #         raw_pupilsize = pd.concat([raw_pupilsize, all_data.loc[all_data['modality'] == 'PupilSize']])
+    #         raw_openness = pd.concat([raw_openness, all_data.loc[all_data['modality'] == 'Openness']])
+
+    # raw_eeg = sort_data_frame(raw_eeg)
     # raw_location = sort_data_frame(raw_location)
     # raw_audio = sort_data_frame(raw_audio)
     # raw_pupilsize = sort_data_frame(raw_pupilsize)
     # raw_openness = sort_data_frame(raw_openness)
 
-    raw_eeg.to_pickle(os.path.join(path, '../', 'raw_eeg.pkl' ))
+    # raw_eeg.to_pickle(os.path.join(path, '../', 'raw_eeg.pkl' ))
     # raw_location.to_pickle(os.path.join(path, '../', 'raw_location.pkl' ))
     # raw_audio.to_pickle(os.path.join(path, '../', 'raw_audio.pkl' ))
     # raw_pupilsize.to_pickle(os.path.join(path, '../', 'raw_pupilsize.pkl' ))
     # raw_openness.to_pickle(os.path.join(path, '../', 'raw_openness.pkl' ))
-
-    # raw_location = pd.read_pickle(os.path.join(path, '../', 'raw_location.pkl' ))
-    # ring_comm_diff_df = read_corresponding_ring_communication(raw_location)
-    # trialed_location = trial_location(raw_location, ring_comm_diff_df)
-    # trialed_location.to_pickle(os.path.join(path, '../', 'trialed_location.pkl' ))
-    # if downsample_epoch:
-    #     downsampled_location = downsample_location_df(trialed_location)
-    #     epoch_location = epoch_location_df(downsampled_location, ring_comm_diff_df)
-    #     epoch_location.to_pickle(os.path.join(path, '../', 'epoched_downsampled_location.pkl' ))
-    # else:
-    #     epoch_location = epoch_location_without_downsample(trialed_location, ring_comm_diff_df)
-    #     epoch_location.to_pickle(os.path.join(path, '../', 'epoched_raw_location.pkl' ))
+    import IPython
+    IPython.embed()
+    assert False
+    raw_location = pd.read_pickle(os.path.join(path, '../', 'raw_location.pkl' ))
+    ring_comm_diff_df = read_corresponding_ring_communication(raw_location)
+    trialed_location = trial_location(raw_location, ring_comm_diff_df)
+    trialed_location.to_pickle(os.path.join(path, '../', 'trialed_location.pkl' ))
+    if downsample_epoch:
+        downsampled_location = downsample_location_df(trialed_location)
+        epoch_location = epoch_location_df(downsampled_location, ring_comm_diff_df)
+        epoch_location.to_pickle(os.path.join(path, '../', 'epoched_downsampled_location.pkl' ))
+    else:
+        epoch_location = epoch_location_without_downsample(trialed_location, ring_comm_diff_df)
+        epoch_location.to_pickle(os.path.join(path, '../', 'epoched_raw_location.pkl' ))
 
 
 

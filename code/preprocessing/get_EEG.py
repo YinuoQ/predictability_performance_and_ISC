@@ -109,7 +109,7 @@ def epoch_eeg(preprocessed_eeg_df, epoched_location):
 
             temp_eeg = preprocessed_eeg_df.query(query_string)
             if len(temp_eeg) > 0:
-                temp_eeg_event = temp_eeg.data.iloc[0]
+                temp_eeg_event = temp_eeg.processed_eeg.iloc[0]
                 temp_eeg_time = temp_eeg.time.iloc[0]
             else:
                 continue
@@ -123,7 +123,7 @@ def epoch_eeg(preprocessed_eeg_df, epoched_location):
                 else:
                     continue
                 if ring_idx >= 384:
-                    epoched_eeg.at[i,f'{role.lower()}EEG'] = temp_eeg_event[ring_idx-384:ring_idx]     
+                    epoched_eeg.at[i,f'{role.lower()}EEG'] = temp_eeg_event[:,ring_idx-384:ring_idx]     
     return epoched_eeg.dropna().reset_index(drop=True)
 
 if __name__ == '__main__':
@@ -142,8 +142,10 @@ if __name__ == '__main__':
     #     preprocessed_eeg_df = pd.concat([preprocessed_eeg_df, temp_pickle], axis=1, ignore_index=True)
     # preprocessed_eeg_df.T.to_pickle(os.path.join(path, 'preprocessed_eeg.pkl' ))
     
-
-
+    # import IPython
+    # IPython.embed()
+    # assert False
+    preprocessed_eeg_df = pd.read_pickle(os.path.join(path, 'preprocessed_eeg.pkl' ))
     epoched_location = pd.read_pickle(os.path.join(path, 'epoched_raw_location.pkl'))     
     epoched_eeg_df = epoch_eeg(preprocessed_eeg_df, epoched_location)
     epoched_eeg_df.to_pickle(os.path.join(path, 'epoched_eeg.pkl' ))
