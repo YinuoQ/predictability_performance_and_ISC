@@ -8,6 +8,7 @@ Thumbs.db
 
 # Ignore compiled files and build artifacts
 *.pyc
+*.npy
 *.pyo
 *.pyd
 __pycache__/
@@ -43,18 +44,11 @@ pip-lock.txt
 
 # Ignore macOS file metadata
 # Comment the next line if you use macOS and want to keep file metadata
-#*._DS_Store
-eeg_plots/
-eeg_plots/*.png
-
-ml_model/data/*
-!ml_model/data/*.py
-
-ml_model/script/*
-!ml_model/script/*.py
-!ml_model/script/*.sh
-*/*.png
+*._DS_Store
 
 
+data
+!transformer/data
 
-data/
+transformer/data/*
+!transformer/data/*.py

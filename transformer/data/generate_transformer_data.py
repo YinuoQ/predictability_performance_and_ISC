@@ -82,20 +82,46 @@ def select_model_input_and_output(data_df, start_id, end_id, role):
             input_data_lst.append(np.array(list(data_df.iloc[start_id:end_id][f'{input_role[1]}{modality}']))[:,:60])
     
     input_data_lst.append(np.array(list(data_df.iloc[start_id:end_id][f'{role}Action']))[:,60:])
-    input_data_lst.append(np.array(list(data_df.iloc[start_id:end_id][f'{role}Action']))[:,60:])
 
     return input_data_lst 
 
+def reformat_input_output_data(input_output_lst):
+    eeg_pp_action_speech = []
+    input_output_arr = np.array(input_output_lst, dtype=object)
+
+    for i in [0,2,4,6]:
+        # Reshape the array to have 9 rows (each row corresponds to one of the 9 groups)
+        reshaped_arr_9th = input_output_arr[i::9]
+        reshaped_arr_10th = input_output_arr[i+1::9]
+
+        # Stack the 9th and 10th elements row-wise
+        stacked_arr = np.vstack((reshaped_arr_9th, reshaped_arr_10th)).T
+
+        # Flatten the stacked array back to 1D
+        reformed_arr = stacked_arr.flatten()
+
+        # Combine pairs of arrays and stack them
+        stacked_arrays = []
+        for i in range(0, len(reformed_arr), 2):
+            combined = np.stack((reformed_arr[i], reformed_arr[i+1]), axis=1)
+            stacked_arrays.append(combined)
+
+        # Concatenate the stacked arrays along the first axis
+        output_array = np.concatenate(stacked_arrays, axis=0)
+        eeg_pp_action_speech.append(output_array)
+    return eeg_pp_action_speech, np.vstack(input_output_arr[8::9])
+
 def generate_training_testing_val_dataset(data_df, seed=1, data_split_ratio=(0.75, 0.2, 0.05)):
-    unique_team_sess_trial = data_df['teamID'].unique()
+    unique_team = data_df['teamID'].unique()
 
     training_lst = []
     testing_lst = []
     validation_lst = []
-    team_sess_trial_lst = []
+    test_team_sess_trial_ring_lst = []
     role_lst = ['yaw', 'pitch', 'thrust']
+
     for role in role_lst:
-        for team_id in unique_team_sess_trial:
+        for team_id in unique_team:
             temp_data_df = data_df[data_df.teamID == team_id]
             shuffled_df = temp_data_df.sample(frac=1, random_state=seed)
             train_end = int(len(shuffled_df)*data_split_ratio[0])
@@ -104,15 +130,28 @@ def generate_training_testing_val_dataset(data_df, seed=1, data_split_ratio=(0.7
             temp_training_lst = select_model_input_and_output(shuffled_df, 0, train_end, role)
             temp_testing_lst = select_model_input_and_output(shuffled_df, train_end, test_end, role)
             temp_validation_lst = select_model_input_and_output(shuffled_df, test_end, val_len, role)
-            training_lst.append(temp_training_lst)
-            testing_lst.append(temp_testing_lst)
-            validation_lst.append(temp_validation_lst)
-            
-    import IPython
-    IPython.embed()
-    assert False
+            training_lst += temp_training_lst
+            testing_lst += temp_testing_lst
+            validation_lst += temp_validation_lst
+            test_team_sess_trial_ring_lst.append(temp_data_df[['teamID', 'sessionID', 'trialID', 'ringID']].iloc[train_end:test_end])
+
+    training_arr_input, training_arr_output = reformat_input_output_data(training_lst)
+    testing_arr_input, testing_arr_output = reformat_input_output_data(testing_lst)
+    validation_arr_input, validation_arr_output = reformat_input_output_data(validation_lst)
+
+    for i, modality in enumerate(['EEG', 'Pupil', 'Action', 'Speech']):
+
+        np.save(os.path.join('train', f'train_{modality.lower()}.npy'), training_arr_input[i])
+        np.save(os.path.join('test', f'test_{modality.lower()}.npy'), testing_arr_input[i])
+        np.save(os.path.join('validation', f'validation_{modality.lower()}.npy'), validation_arr_input[i])
+
+    np.save(os.path.join('train', f'train_output.npy'), training_arr_output)
+    np.save(os.path.join('test', f'test_output.npy'), testing_arr_output)
+    np.save(os.path.join('validation', f'validation_output.npy'), validation_arr_output)
+    np.save(os.path.join('test', f'data_info.npy'), np.array(test_team_sess_trial_ring_lst[:len(unique_team)], dtype=object))
+
 if __name__ == '__main__':
-    path = '../data'
+    path = '../../data'
     seed = 1234
 
     pd.set_option('display.max_columns', None)
@@ -120,7 +159,6 @@ if __name__ == '__main__':
     transformer_data_df = transformer_data_generator(action_df, pupil_df, eeg_df, speech_df)   
     generate_training_testing_val_dataset(transformer_data_df, seed)
     
-    transformer_data_df.to_pickle(os.path.join(path, 'transformer_data.pkl'))
 
 
 
