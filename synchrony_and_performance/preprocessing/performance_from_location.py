@@ -32,7 +32,7 @@ def get_performance_from_location(location_df):
         y_diff = temp_location.ringZ - temp_location.location[2,ring_idx]
         diviation = np.sqrt(x_diff**2 + y_diff**2) / radius_dict[temp_location.difficulty]
         relative_time = (temp_location.ringTime - temp_location.startTime - min_time) / (max_time - min_time)
-        performance = - relative_time * diviation
+        performance = 1 - relative_time * diviation
         performance_df.at[i, 'performance'] = performance
     return performance_df
 if __name__ == '__main__':

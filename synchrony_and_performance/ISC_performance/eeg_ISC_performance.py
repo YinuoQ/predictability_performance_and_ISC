@@ -66,7 +66,7 @@ def get_trialed_EEG_ISC_with_performance(lcoation_df, eeg_df):
         for idx in data_ids:
             temp_eeg = np.array([eeg_df.iloc[i].yawEEG, eeg_df.iloc[i].pitchEEG, eeg_df.iloc[i].thrustEEG])
             temp_ISC,_ = cca.ISC_eeg(temp_eeg)
-            ISC_epoch_lst.append(np.abs(temp_ISC[0]))
+            ISC_epoch_lst.append(temp_ISC[0])
 
         performance_df.at[i, 'eegISC'] = np.tanh(np.nanmean(np.arctanh(ISC_epoch_lst)))
 

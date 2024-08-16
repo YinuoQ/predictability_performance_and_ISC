@@ -33,8 +33,8 @@ def get_speech_performance(lcoation_df, speech_event):
 
 def ISC_among_speech(speech_event):
     cov_mat = np.abs(np.corrcoef(np.array([speech_event.yawSpeech, 
-                                           speech_event.pitchSpeech, 
-                                           speech_event.thrustSpeech])))
+                                       speech_event.pitchSpeech, 
+                                       speech_event.thrustSpeech])))
     r_xy = cov_mat[0,1]
     r_xz = cov_mat[0,2]
     r_yz = cov_mat[1,2]
