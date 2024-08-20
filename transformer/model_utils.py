@@ -60,14 +60,18 @@ class CrossModalTransformer(nn.Module):
     # Constructor
     def __init__(self):
         super(CrossModalTransformer, self).__init__()
-        self.d_model = 32
-        self.num_layers = 4
-        self.num_head = 8
+        self.d_model = 64
+        self.num_layers = 2
+        self.num_head = 4
         self.positional_encoding = PositionalEncoding(self.d_model)
         
         # Convolution layers
-        self.conv_eeg = nn.Conv2d(2, 1, (20, 225))
-        self.conv_1d = nn.Conv1d(2, 1, 29)
+        if self.d_model == 32:
+            self.conv_eeg = nn.Conv2d(2, 1, (20, 225))
+            self.conv_1d = nn.Conv1d(2, 1, 29)
+        else:
+            self.conv_eeg = nn.Conv2d(2, 1, (20, 193))
+            self.conv_1d = nn.Conv1d(2, 1, 1, padding=2)            
         self.tgt_embeding = nn.Linear(30, self.d_model)
 
         # Cross-attention layers for each modality as query
@@ -99,9 +103,7 @@ class CrossModalTransformer(nn.Module):
     def forward(self, src1, src2, src3, src4, tgt):
         # Src size must be (batch_size, src sequence length)
         # Tgt size must be (batch_size, tgt sequence length)
-
         # Embedding + positional encoding - Out size = (batch_size, sequence length, dim_model)
-
         src1 = self.conv_eeg(src1).squeeze()
         src2 = self.conv_1d(src2).squeeze()
         src3 = self.conv_1d(src3).squeeze()

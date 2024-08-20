@@ -34,36 +34,6 @@ def seed(cfg):
     if cfg.if_cuda:
         torch.cuda.manual_seed(cfg.seed)
 
-def pearson_correlation(datax, datay):
-    numerator1 = datax - np.nanmean(datax)
-    numerator2 = datay - np.nanmean(datay)
-    numerator = np.nansum(numerator1*numerator2)
-    denometor1 = np.nansum((datax - np.nanmean(datax))**2)
-    denometor2 = np.nansum((datay - np.nanmean(datay))**2)
-    denometor = np.sqrt(denometor1*denometor2)
-    return np.abs(numerator / denometor)
-def crosscorr(datax, datay, lag=0):
-    """ Lag-N cross correlation. 
-    Shifted data filled with NaNs 
-
-    Returns
-    ----------
-    crosscorr : float
-    """
-    datay_shift = copy.deepcopy(datay)
-    datay_shift[:lag] = np.nan
-    datay_shift[lag:] = datay[lag:]
-    
-    return pearson_correlation(datax, datay_shift)
-
-def nanargmax(a, axis=0):
-    arg_max_idx_lst = []
-    for i in range(a.shape[0]):
-        if np.sum(np.isnan(a[i])) == a[i].shape[0]:
-            arg_max_idx_lst.append(np.nan)
-        else:
-            arg_max_idx_lst.append(np.nanargmax(a[i]))
-    return np.array(arg_max_idx_lst)
 
 def evaluation_matrics(pred_output, target, transformer):
     # auroc = MulticlassAUROC(num_classes=3)
@@ -126,6 +96,7 @@ def main():
     checkpoint_filepath = str(sys.argv[2])
     checkpoint_filepath = glob.glob(os.path.join(checkpoint_filepath, '*.ckpt'))[0]
     log_base_filepath = '/'.join(checkpoint_filepath.split('/'))
+
     cfg = load_config(filepath=config_filepath)
     pprint.pprint(cfg)
     cfg = munchify(cfg)
@@ -136,43 +107,52 @@ def main():
                         str(cfg.seed)])
     
     log_dir = os.path.join(log_base_filepath, log_dir)
-    # log_dir = log_base_filepath
+    log_dir = log_base_filepath
 
     model = ActionPredictionModel(lr=cfg.lr,
-                                seed=cfg.seed,
-                                if_cuda=cfg.if_cuda,
-                                if_test=True,
-                                gamma=cfg.gamma,
-                                log_dir=log_dir,
-                                train_batch=cfg.train_batch,
-                                val_batch=cfg.val_batch,
-                                test_batch=cfg.test_batch,
-                                num_workers=cfg.num_workers,
-                                data_filepath=cfg.data_filepath,
-                                lr_schedule=cfg.lr_schedule,
-                                time_length=cfg.time_length)
+                                  seed=cfg.seed,
+                                  if_cuda=cfg.if_cuda,
+                                  if_test=False,
+                                  gamma=cfg.gamma,
+                                  log_dir=log_dir,
+                                  train_batch=cfg.train_batch,
+                                  val_batch=cfg.val_batch,
+                                  test_batch=cfg.test_batch,
+                                  num_workers=cfg.num_workers,
+                                  data_filepath=cfg.data_filepath,
+                                  lr_schedule=cfg.lr_schedule)
 
-    ckpt = torch.load(checkpoint_filepath, map_location='cpu')
+    ckpt = torch.load(checkpoint_filepath)
+
     model.load_state_dict(ckpt['state_dict'], strict=False)
-    model = model.to(torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
-    model.freeze()
+    model = model.to('cuda')
+
     model.eval()
-    test_set_file_path = cfg.data_filepath
+    model.freeze()
+    # test_set_file_path = cfg.data_filepath
+    
 
-    test_set = PredictAction(flag='test', 
-                             seed=cfg.seed, 
-                             dataset_folder=test_set_file_path, 
-                             time_length=cfg.time_length)
+    # test_set = PredictAction(flag='test', 
+    #                          seed=cfg.seed, 
+    #                          dataset_folder=test_set_file_path)
 
 
-    test_loader = torch.utils.data.DataLoader(dataset=test_set,
-                                             batch_size=cfg.test_batch,
-                                             shuffle=False)
+    # test_loader = torch.utils.data.DataLoader(dataset=test_set,
+    #                                          batch_size=cfg.test_batch,
+    #                                          shuffle=False)
 
-    torch.manual_seed(cfg.seed)
-    np.random.seed(cfg.seed) 
-    test_Transformer(test_loader, model, log_dir)
-        
+
+    trainer = Trainer(default_root_dir=log_dir,
+                      amp_backend='native',
+                      accelerator="gpu",
+                      devices=1)
+    import IPython
+    IPython.embed()
+    assert False
+    trainer.test(model)
+
+    model.test_save()    
+
 
 if __name__ == '__main__':
     main()
