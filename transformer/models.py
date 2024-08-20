@@ -13,7 +13,7 @@ from collections import OrderedDict
 from torchmetrics import classification
 from torch.utils.data import DataLoader
 from dataset import PredictAction
-from model_utils import ActionPredictionTransformerClassificationModel
+from model_utils import CrossModalTransformer
 
 class ActionPredictionModel(pl.LightningModule):
     def __init__(self,
@@ -27,12 +27,8 @@ class ActionPredictionModel(pl.LightningModule):
                  val_batch: int=1400,
                  test_batch: int=1400,
                  num_workers: int=8,
-                 model_name: str='mlps',
                  data_filepath: str='data',
-                 loss_type: str='ce',
-                 lr_schedule: list=[100000], 
-                 time_length: int=2900,
-                 input_modality: list=['pupil', 'eeg', 'ekg', 'speech']) -> None:
+                 lr_schedule: list=[100000]) -> None:
         super().__init__()
         self.save_hyperparameters()
         self.kwargs = {'num_workers': self.hparams.num_workers, 'pin_memory': True} if self.hparams.if_cuda else {}
@@ -40,7 +36,7 @@ class ActionPredictionModel(pl.LightningModule):
 
     def __build_model(self):
         # model
-        self.model = ActionPredictionTransformerClassificationModel(in_channels=self.hparams.time_length, input_modality=self.hparams.input_modality)
+        self.model = CrossModalTransformer()
 
         # loss
         self.loss_func = nn.CrossEntropyLoss()
@@ -48,32 +44,27 @@ class ActionPredictionModel(pl.LightningModule):
         # self.accuracy_func = classification.MulticlassAccuracy(3)
         # self.accuracy_func = self.correlation_arruracy()
     
-    def get_tgt_mask(self, size1, size2 = 0) -> torch.tensor:
-        # Generates a squeare matrix where the each row allows one word more to be seen
-        if size2 == 0:
-            size2 = size1
-        mask = torch.tril(torch.ones(size1, size2) == 1) # Lower triangular matrix
-        mask = mask.float()
-        mask = mask.masked_fill(mask == 0, float('-inf')) # Convert zeros to -inf
-        mask = mask.masked_fill(mask == 1, float(0.0)) # Convert ones to 0
 
-        return mask
-    
     def correlation_arruracy(self, prediction, target):
-        pred = torch.argmax(prediction, dim=2).float()
-        targ = target.float()
+        pred = torch.argmax(prediction, dim=1).float()
+        targ = target + 1
         pearson_r_lst = []
         for i in range(len(pred)):
-            pearson_r_lst.append(torch.corrcoef(torch.stack((pred[i], targ[i])))[0,1])
-        return torch.nanmean(torch.tensor(pearson_r_lst))
+            if (pred[i] == targ[i]).sum() == 30:
+                pearson_r_lst.append(1)
+            elif (pred[i] == pred[i,0]).sum() == 30 or (targ[i] == targ[i,0]).sum() == 30:
+                pearson_r_lst.append(0)
+            else:
+                pearson_r_lst.append(torch.abs(torch.corrcoef(torch.stack((pred[i], targ[i])))[0,1]))
+        
+        output = np.nanmean(pearson_r_lst)         
+        return output
     
     def training_step(self, batch, batch_idx):
-        src, trg, trg_y = batch
-        trg_mask = self.get_tgt_mask(trg.shape[1]).to(self.device)
-        src_mask = self.get_tgt_mask(30, src.shape[1]-2432).to(self.device)
-        pred_output = self.model(src, trg, src_mask, trg_mask) 
+        src1, src2, src3, src4, trg, trg_y = batch
+        pred_output = self.model(src1, src2, src3, src4, trg) 
         train_acc = self.correlation_arruracy(pred_output, trg_y)
-        train_loss = self.loss_func(pred_output.permute(0,2,1), trg_y.long())
+        train_loss = self.loss_func(pred_output, trg_y.long())
 
         self.log('train_loss', train_loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         self.log('train_acc', train_acc, on_step=True, on_epoch=True, prog_bar=True, logger=True)
@@ -82,12 +73,13 @@ class ActionPredictionModel(pl.LightningModule):
 
 
     def validation_step(self, batch, batch_idx):
-        src, trg, trg_y = batch
-        trg_mask = self.get_tgt_mask(trg.shape[1]).to(self.device)
-        src_mask = self.get_tgt_mask(30, src.shape[1]-2432).to(self.device)
-        pred_output = self.model(src, trg, src_mask, trg_mask) 
+        src1, src2, src3, src4, trg, trg_y = batch
+        pred_output = self.model(src1, src2, src3, src4, trg) 
         val_acc = self.correlation_arruracy(pred_output, trg_y)
-        val_loss = self.loss_func(pred_output.permute(0,2,1), trg_y.long())
+        import IPython
+        IPython.embed()
+        assert False
+        val_loss = self.loss_func(pred_output, trg_y.long())
 
         self.log('val_loss', val_loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         self.log('val_acc', val_acc, on_step=True, on_epoch=True, prog_bar=True, logger=True)
@@ -96,7 +88,7 @@ class ActionPredictionModel(pl.LightningModule):
         
     def test_step(self, batch, batch_idx):
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        src, trg, trg_y = batch
+        src1, src2, src3, src4, trg, trg_y = batch
         src = src.to(device)
         trg_y = trg_y.to(device)
         trg_mask = self.get_tgt_mask(trg.shape[1]).to(self.device)
@@ -119,19 +111,16 @@ class ActionPredictionModel(pl.LightningModule):
         if stage == 'fit':
             self.train_dataset = PredictAction(flag='train',
                                                seed=self.hparams.seed,
-                                               dataset_folder=self.hparams.data_filepath,
-                                               time_length = self.hparams.time_length)
+                                               dataset_folder=self.hparams.data_filepath)
             
-            self.val_dataset = PredictAction(flag='val',
+            self.val_dataset = PredictAction(flag='validation',
                                              seed=self.hparams.seed,
-                                             dataset_folder=self.hparams.data_filepath,
-                                             time_length = self.hparams.time_length)
+                                             dataset_folder=self.hparams.data_filepath)
         
         if stage == 'test':
             self.test_dataset = PredictAction(flag='test',
                                               seed=self.hparams.seed,
-                                              dataset_folder=self.hparams.data_filepath,
-                                              time_length = self.hparams.time_length)
+                                              dataset_folder=self.hparams.data_filepath)
 
 
     def train_dataloader(self):

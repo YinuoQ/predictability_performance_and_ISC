@@ -54,16 +54,14 @@ def main():
                                   model_name=model_name,
                                   data_filepath=cfg.data_filepath,
                                   loss_type = cfg.loss_type,
-                                  lr_schedule=cfg.lr_schedule,
-                                  time_length=cfg.time_length,
-                                  time_out=cfg.time_out)
+                                  lr_schedule=cfg.lr_schedule)
 
     # define callback for selecting checkpoints during training
     checkpoint_callback = ModelCheckpoint(
-        filename=log_dir + "{epoch}_{val_auroc}_{val_acc}",
+        filename=log_dir + "{epoch}_{val_acc:.3f}_{val_loss:.3f}",
         verbose=True,
-        monitor='val_auroc',
-        mode='max',
+        monitor='val_loss',
+        mode='min',
         prefix='')
 
     # define trainer

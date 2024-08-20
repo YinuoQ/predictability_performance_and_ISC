@@ -52,7 +52,6 @@ def main():
                                   test_batch=cfg.test_batch,
                                   num_workers=cfg.num_workers,
                                   data_filepath=cfg.data_filepath,
-                                  time_length=cfg.time_length,
                                   lr_schedule=cfg.lr_schedule)
 
 
@@ -61,7 +60,6 @@ def main():
                                           verbose=True,
                                           monitor='val_loss',
                                           mode='min')
-
     # define trainer
     trainer = Trainer(max_epochs=cfg.epochs,
                       default_root_dir=log_dir,

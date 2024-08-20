@@ -111,6 +111,19 @@ def reformat_input_output_data(input_output_lst):
         eeg_pp_action_speech.append(output_array)
     return eeg_pp_action_speech, np.vstack(input_output_arr[8::9])
 
+def shuffle_arr(input_arr, output_arr, seed, test_team_sess=None):
+   
+    shuffled_input_lst = []
+    np.random.seed(seed=seed)
+    random_idx = np.random.choice(len(input_arr[0]), len(input_arr[0]), replace=False)
+    for i in range(len(input_arr)):
+        shuffled_input_lst.append(input_arr[i][random_idx])
+    shuffled_output = output_arr[random_idx]
+    if test_team_sess is not None:
+        return shuffled_input_lst, shuffled_output, test_team_sess.iloc[random_idx]
+    else:
+        return shuffled_input_lst, shuffled_output
+
 def generate_training_testing_val_dataset(data_df, seed=1, data_split_ratio=(0.75, 0.2, 0.05)):
     unique_team = data_df['teamID'].unique()
 
@@ -134,10 +147,15 @@ def generate_training_testing_val_dataset(data_df, seed=1, data_split_ratio=(0.7
             testing_lst += temp_testing_lst
             validation_lst += temp_validation_lst
             test_team_sess_trial_ring_lst.append(temp_data_df[['teamID', 'sessionID', 'trialID', 'ringID']].iloc[train_end:test_end])
-
+  
+    test_team_sess_trial_ring_df = pd.concat(test_team_sess_trial_ring_lst)
     training_arr_input, training_arr_output = reformat_input_output_data(training_lst)
     testing_arr_input, testing_arr_output = reformat_input_output_data(testing_lst)
     validation_arr_input, validation_arr_output = reformat_input_output_data(validation_lst)
+
+    training_arr_input, training_arr_output = shuffle_arr(training_arr_input, training_arr_output, seed)
+    testing_arr_input, testing_arr_output, test_team_sess_trial_ring_df = shuffle_arr(testing_arr_input, testing_arr_output, seed, test_team_sess_trial_ring_df)
+    validation_arr_input, validation_arr_output = shuffle_arr(validation_arr_input, validation_arr_output, seed)
 
     for i, modality in enumerate(['EEG', 'Pupil', 'Action', 'Speech']):
 

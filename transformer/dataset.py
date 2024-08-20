@@ -10,42 +10,51 @@ from torch.utils.data import Dataset
 
 
 class PredictAction(Dataset):
-    def __init__(self, flag, seed, dataset_folder, time_length):
+    def __init__(self, flag, seed, dataset_folder):
         super().__init__()
         self.time_out = 30
         self.flag = flag
+
         self.seed = seed
         self.dataset_folder = dataset_folder
-        self.time_length = time_length
         self.current_data = self.get_current_data()
         self.target_seq_len = 30
 
-    def get_current_data(self):
-        df = pd.read_csv(os.path.join((self.dataset_folder), f'{self.flag}.csv'), header=None)
-        df = df.dropna()
-        current_data = df.to_numpy()
-        return current_data
-
-
     def __len__(self):
-        return int(self.current_data.shape[0])
+        return int(self.current_data[0].shape[0])
 
     def __getitem__(self, idx):
+        eeg, pupil, speech, action, out_action = self.current_data
+        selected_eeg = eeg[idx, :]
+        selected_pupil = pupil[idx, :]
+        selected_speech = speech[idx, :]
+        selected_action = action[idx, :]
+        selected_out_action = out_action[idx, :]
 
-        selected_data = self.current_data[idx, :]   
-        input_data = selected_data[:-self.time_out]
-        output_data = selected_data[-self.time_out:]            
+        input_eeg = torch.Tensor(selected_eeg)
+        input_pupil = torch.Tensor(selected_pupil)
+        input_speech = torch.Tensor(selected_speech)
+        input_action = torch.Tensor(selected_action)
+        output_data = torch.Tensor(selected_out_action)
 
-        input_data = torch.Tensor(input_data)
-        output_data = torch.FloatTensor(output_data)
-        selected_data = torch.tensor(selected_data)
-        src, trg, trg_y = self.get_src_trg(
-        sequence=selected_data,
-        enc_seq_len=selected_data[:-self.time_out].shape[0],
-        target_seq_len=selected_data[-self.time_out:].shape[0])
-        return src, trg, trg_y
+        src1, src2, src3, src4, trg, trg_y = self.get_src_trg(
+        sequence1=input_eeg,
+        sequence2=input_pupil,
+        sequence3=input_speech,
+        sequence4=input_action,
+        output_seq=output_data)
+        
+        return src1, src2, src3, src4, trg, trg_y
+    
+    def get_current_data(self):
+        eeg = np.load(os.path.join((self.dataset_folder), f'{self.flag}', f'{self.flag}_eeg.npy'), allow_pickle=True)
+        pupil = np.load(os.path.join((self.dataset_folder), f'{self.flag}', f'{self.flag}_pupil.npy'), allow_pickle=True)
+        speech = np.load(os.path.join((self.dataset_folder), f'{self.flag}', f'{self.flag}_speech.npy'), allow_pickle=True)
+        action = np.load(os.path.join((self.dataset_folder), f'{self.flag}', f'{self.flag}_action.npy'), allow_pickle=True)
+        out_action = np.load(os.path.join((self.dataset_folder), f'{self.flag}', f'{self.flag}_output.npy'), allow_pickle=True)
+        return eeg, pupil, speech, action, out_action
 
-    def get_src_trg(self, sequence: torch.Tensor, enc_seq_len: int, target_seq_len: int):# -> Tuple[torch.tensor, torch.tensor, torch.tensor]:
+    def get_src_trg(self, sequence1: torch.Tensor, sequence2: torch.Tensor, sequence3: torch.Tensor, sequence4: torch.Tensor, output_seq: torch.Tensor):
 
         """
         Generate the src (encoder input), trg (decoder input) and trg_y (the target)
@@ -64,13 +73,30 @@ class PredictAction(Dataset):
         
         """
         # encoder input
-        src = sequence[:enc_seq_len] 
+        src1 = sequence1
+        src2 = sequence2
+        src3 = sequence3
+        src4 = sequence4
+
         # decoder input. As per the paper, it must have the same dimension as the 
         # target sequence, and it must contain the last value of src, and all
         # values of trg_y except the last (i.e. it must be shifted right by 1)
-        trg = sequence[enc_seq_len-1:len(sequence)-1]
+        trg = np.zeros(output_seq.shape)
+        temp_mean = torch.mean(src1[:,:,-1])
+        temp_mean += torch.mean(src2[:,-1])
+        temp_mean += torch.mean(src3[:,-1])
+        temp_mean += torch.mean(src4[:,-1])
+        trg = [temp_mean.numpy() / 4] + list(output_seq[:-1])
         # The target sequence against which the model output will be compared to compute loss
-        trg_y = sequence[-target_seq_len:]
+        trg_y = output_seq
         # We only want trg_y to consist of the target variable not any potential exogenous variables
-        return src.float(), trg.float(), trg_y.float() # change size from [batch_size, target_seq_len, num_features] to [batch_size, target_seq_len] 
+        return src1, src2, src3, src4, torch.Tensor(trg), trg_y
+
+
+
+
+
+
+
+
     
