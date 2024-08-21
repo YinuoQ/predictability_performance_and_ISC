@@ -144,6 +144,4 @@ class CrossModalTransformer(nn.Module):
         output = self.classifier(decoded_output.mean(dim=0))  # (N, num_classes)       
         output = F.softmax(output.view(-1, 3, 30), dim=1)
         return output
-        
-
-
+    
