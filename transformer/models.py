@@ -42,20 +42,20 @@ class ActionPredictionModel(pl.LightningModule):
 
         # accuracy
         self.accuracy_func = classification.Accuracy(task="multiclass", num_classes=3)
-
+    
     def correlation_arruracy(self, prediction, target):
         pred = torch.argmax(prediction, dim=1).float()
         targ = target + 1
-        # output = self.accuracy_func(pred, targ)
-        pearson_r_lst = []
-        for i in range(len(pred)):
-            if (pred[i] == targ[i]).sum() == 30:
-                pearson_r_lst.append(torch.Tensor([1]))
-            elif (pred[i] == pred[i,0]).sum() == 30 or (targ[i] == targ[i,0]).sum() == 30:
-                pearson_r_lst.append(torch.Tensor([0]))
-            else:
-                pearson_r_lst.append(torch.abs(torch.corrcoef(torch.stack((pred[i], targ[i])))[0,1]))
-        output = torch.nanmean(torch.FloatTensor(pearson_r_lst)) 
+        # pearson_r_lst = []
+        # for i in range(len(pred)):
+        #     if (pred[i] == targ[i]).sum() == 30:
+        #         pearson_r_lst.append(torch.Tensor([1]))
+        #     elif (pred[i] == pred[i,0]).sum() == 30 or (targ[i] == targ[i,0]).sum() == 30:
+        #         pearson_r_lst.append(torch.Tensor([0]))
+        #     else:
+        #         pearson_r_lst.append(torch.abs(torch.corrcoef(torch.stack((pred[i], targ[i])))[0,1]))
+        # output = torch.nanmean(torch.FloatTensor(pearson_r_lst)) 
+        output = self.accuracy_func(pred, targ)
         return output
     
     def training_step(self, batch, batch_idx):
@@ -87,16 +87,21 @@ class ActionPredictionModel(pl.LightningModule):
         test_acc = self.correlation_arruracy(pred_output, trg_y)
         test_loss = self.loss_func(pred_output, trg_y.long()+1)
 
-        self.log('test_loss', test_loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
-        self.log('test_acc', test_acc, on_step=True, on_epoch=True, prog_bar=True, logger=True)
-        
-        return test_loss, pred_output
+        self.log('test_loss', test_loss)
+        self.log('test_acc', test_acc)
+        return test_loss
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=self.hparams.lr)
         scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=self.hparams.lr_schedule, gamma=self.hparams.gamma)
         return [optimizer], [scheduler]
+    
+    def predict_step(self, batch, batch_idx: int , dataloader_idx: int = None):
+        src1, src2, src3, src4, trg, trg_y = batch   
+        pred_output = self.model(src1, src2, src3, src4, trg)     
 
+        return pred_output
+    
     def setup(self, stage=None):
         if stage == 'fit':
             self.train_dataset = PredictAction(flag='train',

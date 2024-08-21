@@ -51,7 +51,6 @@ class CrossAttentionLayer(nn.Module):
         # Transpose back to [batch_size, seq_len, d_model]
         attn_output = attn_output.transpose(0, 1)
         
-        attn_output = self.dropout(attn_output)
         output = self.norm(query + attn_output)  # Residual connection and normalization
         return output
 
@@ -88,11 +87,10 @@ class CrossModalTransformer(nn.Module):
                 nn.ReLU(),
                 nn.Linear(30, self.d_model),
                 nn.LayerNorm(self.d_model),
-                nn.Dropout(0.1)
             ) for _ in range(self.num_layers)
         ])
         
-        self.decoder = nn.TransformerDecoderLayer(d_model=self.d_model, nhead=self.num_head)
+        self.decoder = nn.TransformerDecoderLayer(d_model=self.d_model, nhead=self.num_head, batch_first=True)
         self.classifier = nn.Linear(self.d_model, 90)
     
     def generate_square_subsequent_mask(self, sz):
@@ -129,8 +127,8 @@ class CrossModalTransformer(nn.Module):
             embedded_modalities = [feedforward_layer(modality) for modality in embedded_modalities]
         
         # Pooling over the sequence for each modality and combine
-        pooled_modalities = torch.stack([modality.mean(dim=1) for modality in embedded_modalities], dim=1)  # (N, num_modalities, d_model)
-        combined_src = pooled_modalities.mean(dim=1)  # (N, d_model) - Mean pooling across modalities
+        pooled_modalities = torch.stack([modality for modality in embedded_modalities], dim=1)  # (N, num_modalities, d_model)
+        combined_src = pooled_modalities.view(len(src1),-1,self.d_model)  # (N, 4N, d_model) - Mean pooling across modalities
          
         # Positional encoding for target
         tgt = self.tgt_embeding(tgt)
@@ -138,10 +136,12 @@ class CrossModalTransformer(nn.Module):
         tgt_mask = self.generate_square_subsequent_mask(tgt.size(1)).to(tgt.device)
         
         # Transformer decoder
-        decoded_output = self.decoder(tgt.transpose(0, 1), combined_src.unsqueeze(0), tgt_mask=tgt_mask)  # (tgt_len, N, d_model)
+        decoded_output = self.decoder(tgt, combined_src, tgt_mask=tgt_mask)  # (tgt_len, N, d_model)
         
         # Final classification layer
-        output = self.classifier(decoded_output.mean(dim=0))  # (N, num_classes)       
-        output = F.softmax(output.view(-1, 3, 30), dim=1)
+        output = self.classifier(decoded_output.mean(dim=0))  # (N, num_classes)     
+        output = output.view(-1, 3, 30)
+        output = F.softmax(output, dim=1)
+  
         return output
     

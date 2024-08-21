@@ -7,19 +7,19 @@ import torch
 import pprint
 import numpy as np
 import pandas as pd
-from tqdm import tqdm
-from scipy.spatial import distance
-from scipy.signal import correlate
-from torchmetrics.classification import MulticlassAUROC
 from utils import common
 from munch import munchify
+import matplotlib.pyplot as plt
+from dataset import PredictAction
+from scipy.spatial import distance
+from scipy.signal import correlate
 from collections import OrderedDict
 from models import ActionPredictionModel
+from torchmetrics.classification import MulticlassAUROC
 from pytorch_lightning.plugins import DDPPlugin
-from dataset import PredictAction
 from pytorch_lightning import Trainer, seed_everything
 from pytorch_lightning.loggers import TensorBoardLogger
-from collections import OrderedDict
+
 
 def load_config(filepath):
     with open(filepath, 'r') as stream:
@@ -34,87 +34,44 @@ def seed(cfg):
     if cfg.if_cuda:
         torch.cuda.manual_seed(cfg.seed)
 
+def get_prediction_results(batch_prediction, target):
+    prediction_output_lst = []
+    for i in range(len(batch_prediction)):
+        prediction_output_lst.append(np.array(torch.argmax(batch_prediction[i], dim=1).float().to('cpu')) - 1)
+    plt.figure(figsize=(200, 6), dpi=100)
+    plt.plot(np.vstack(prediction_output_lst).flatten(), '.-')
+    plt.plot(target.flatten(), '.-', alpha=0.5)
+    plt.savefig('prediction_results.png', bbox_inches='tight', pad_inches=0)
+    plt.close()
 
-def evaluation_matrics(pred_output, target, transformer):
-    # auroc = MulticlassAUROC(num_classes=3)
-
-    pred_stacked = torch.stack(pred_output).permute(1,2,0)
-
-    target = target.to('cpu')
-    pred_stacked = pred_stacked.to('cpu')
-
-    # prediction results after classification
-    pred_results = []
-    for acc_idx in range(len(pred_output)):
-        pred_results.append(torch.argmax(pred_output[acc_idx], axis=1).tolist())
-    pred_results = torch.tensor(pred_results).T
-    pred_results[pred_results == 2] = -1
-    target[target == 2] = -1
-
-    pred_results_arr = pred_results.numpy()
-    target_arr = target.numpy()
-    r = np.corrcoef(pred_results_arr.flatten(), target_arr.flatten())[0,1]
-    return  r, pred_results_arr, target_arr
-
-
-def one_hot_encoding(data):
-    # one-hot encoding for nn-results
-    data_arr = np.array(data)
-    data_tensor = torch.tensor((np.arange(3) == data_arr[...,None]).astype(int))    
-    return data_tensor.permute(1, 0, 2).float()
-
-
-def test_Transformer(test_loader, model, log_dir):
-    target_lst = []
-    prediction_results_lst = []
-    model_performance_lst = []
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-    for batch_idx, data in enumerate(test_loader):
-        target = data[2]
-        gpu_data = []
-        for p_data in data:
-            gpu_data.append(p_data.to(device))
-        
-        _, pred_output = model.test_step(gpu_data, batch_idx)
-        r, prediction, target = evaluation_matrics(list(pred_output.permute(1, 0, 2)), target.to(device), True)
-        target_lst.append(target)
-        prediction_results_lst.append(prediction)
-        model_performance_lst.append(r)
-
-    print('######################################################################################')
-    print(np.tanh(np.mean(np.arctanh(model_performance_lst))))
-    print('######################################################################################')
-    
-    save_path = os.path.join(*log_dir.split('/')[:3])
-    target_prediction_results = np.array([np.vstack(target_lst), np.vstack(prediction_results_lst)])
-    np.save(os.path.join(save_path, 'results.npy'), np.array(target_prediction_results))
+    return np.vstack(prediction_output_lst)
 
 
 def main():
     config_filepath = str(sys.argv[1])
     checkpoint_filepath = str(sys.argv[2])
     checkpoint_filepath = glob.glob(os.path.join(checkpoint_filepath, '*.ckpt'))[0]
-    log_base_filepath = '/'.join(checkpoint_filepath.split('/'))
+    # log_base_filepath = '/'.join(checkpoint_filepath.split('/'))
 
     cfg = load_config(filepath=config_filepath)
     pprint.pprint(cfg)
     cfg = munchify(cfg)
     seed(cfg)
     seed_everything(cfg.seed)
+    
+    model_name = cfg.data_filepath.split('/')[-2]
 
     log_dir = '_'.join([cfg.log_dir,
+                        model_name,
+                        'seed',
                         str(cfg.seed)])
     
-    log_dir = os.path.join(log_base_filepath, log_dir)
-    log_dir = log_base_filepath
-
     model = ActionPredictionModel(lr=cfg.lr,
                                   seed=cfg.seed,
                                   if_cuda=cfg.if_cuda,
                                   if_test=False,
                                   gamma=cfg.gamma,
-                                  log_dir=log_dir,
+                                  log_dir=cfg.log_dir,
                                   train_batch=cfg.train_batch,
                                   val_batch=cfg.val_batch,
                                   test_batch=cfg.test_batch,
@@ -129,29 +86,19 @@ def main():
 
     model.eval()
     model.freeze()
-    # test_set_file_path = cfg.data_filepath
+
+    trainer = Trainer(enable_checkpointing=False)
+
+    a = trainer.test(model)
     
-
-    # test_set = PredictAction(flag='test', 
-    #                          seed=cfg.seed, 
-    #                          dataset_folder=test_set_file_path)
-
-
-    # test_loader = torch.utils.data.DataLoader(dataset=test_set,
-    #                                          batch_size=cfg.test_batch,
-    #                                          shuffle=False)
+    test_loader = model.test_dataloader()
+    predictions = trainer.predict(model, test_loader)
+    target = test_loader.dataset.current_data[-1]
 
 
-    trainer = Trainer(default_root_dir=log_dir,
-                      amp_backend='native',
-                      accelerator="gpu",
-                      devices=1)
-    import IPython
-    IPython.embed()
-    assert False
-    trainer.test(model)
+    predicted_output = get_prediction_results(predictions,target)
 
-    model.test_save()    
+
 
 
 if __name__ == '__main__':
