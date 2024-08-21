@@ -51,7 +51,7 @@ def main():
     config_filepath = str(sys.argv[1])
     checkpoint_filepath = str(sys.argv[2])
     checkpoint_filepath = glob.glob(os.path.join(checkpoint_filepath, '*.ckpt'))[0]
-    # log_base_filepath = '/'.join(checkpoint_filepath.split('/'))
+    result_save_path = '/'.join(checkpoint_filepath.split('/')[:-2])
 
     cfg = load_config(filepath=config_filepath)
     pprint.pprint(cfg)
@@ -87,7 +87,10 @@ def main():
     model.eval()
     model.freeze()
 
-    trainer = Trainer(enable_checkpointing=False)
+    trainer = Trainer(enable_checkpointing=False, 
+                      logger=False,
+                      accelerator='gpu', 
+                      devices=1)
 
     a = trainer.test(model)
     
@@ -97,7 +100,7 @@ def main():
 
 
     predicted_output = get_prediction_results(predictions,target)
-
+    np.save(f"{result_save_path}/pred_target.npy", np.vstack([predicted_output, target]))
 
 
 
