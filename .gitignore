@@ -46,9 +46,11 @@ pip-lock.txt
 # Comment the next line if you use macOS and want to keep file metadata
 *._DS_Store
 
+log_**
 
 data
 !transformer/data
 
 transformer/data/*
 !transformer/data/*.py
+
