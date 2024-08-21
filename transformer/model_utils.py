@@ -147,8 +147,3 @@ class CrossModalTransformer(nn.Module):
         
 
 
-
-
-
-
-
