@@ -118,7 +118,7 @@ def shuffle_arr(input_arr, output_arr, seed, test_team_sess=None):
     random_idx = np.random.choice(len(input_arr[0]), len(input_arr[0]), replace=False)
     for i in range(len(input_arr)):
         shuffled_input_lst.append(input_arr[i][random_idx])
-    shuffled_output = output_arr[random_idx]
+    shuffled_output = output_arr#[random_idx]
     if test_team_sess is not None:
         return shuffled_input_lst, shuffled_output, test_team_sess.iloc[random_idx]
     else:
@@ -149,24 +149,24 @@ def generate_training_testing_val_dataset(data_df, seed=1, data_split_ratio=(0.7
             test_team_sess_trial_ring_lst.append(temp_data_df[['teamID', 'sessionID', 'trialID', 'ringID']].iloc[train_end:test_end])
   
     test_team_sess_trial_ring_df = pd.concat(test_team_sess_trial_ring_lst)
-    training_arr_input, training_arr_output = reformat_input_output_data(training_lst)
+    # training_arr_input, training_arr_output = reformat_input_output_data(training_lst)
     testing_arr_input, testing_arr_output = reformat_input_output_data(testing_lst)
-    validation_arr_input, validation_arr_output = reformat_input_output_data(validation_lst)
+    # validation_arr_input, validation_arr_output = reformat_input_output_data(validation_lst)
 
-    training_arr_input, training_arr_output = shuffle_arr(training_arr_input, training_arr_output, seed)
+    # training_arr_input, training_arr_output = shuffle_arr(training_arr_input, training_arr_output, seed)
     testing_arr_input, testing_arr_output, test_team_sess_trial_ring_df = shuffle_arr(testing_arr_input, testing_arr_output, seed, test_team_sess_trial_ring_df)
-    validation_arr_input, validation_arr_output = shuffle_arr(validation_arr_input, validation_arr_output, seed)
+    # validation_arr_input, validation_arr_output = shuffle_arr(validation_arr_input, validation_arr_output, seed)
 
-    for i, modality in enumerate(['EEG', 'Pupil', 'Action', 'Speech']):
+    # for i, modality in enumerate(['EEG', 'Pupil', 'Action', 'Speech']):
 
-        np.save(os.path.join('train', f'train_{modality.lower()}.npy'), training_arr_input[i])
-        np.save(os.path.join('test', f'test_{modality.lower()}.npy'), testing_arr_input[i])
-        np.save(os.path.join('validation', f'validation_{modality.lower()}.npy'), validation_arr_input[i])
+    #     np.save(os.path.join('train', f'train_{modality.lower()}.npy'), training_arr_input[i])
+    #     np.save(os.path.join('test', f'test_{modality.lower()}.npy'), testing_arr_input[i])
+    #     np.save(os.path.join('validation', f'validation_{modality.lower()}.npy'), validation_arr_input[i])
 
-    np.save(os.path.join('train', f'train_output.npy'), training_arr_output)
-    np.save(os.path.join('test', f'test_output.npy'), testing_arr_output)
-    np.save(os.path.join('validation', f'validation_output.npy'), validation_arr_output)
-    np.save(os.path.join('test', f'data_info.npy'), np.array(test_team_sess_trial_ring_lst[:len(unique_team)], dtype=object))
+    # np.save(os.path.join('debug_data', 'train', f'train_output.npy'), training_arr_output)
+    np.save(os.path.join('debug_data', 'test', f'test_output.npy'), testing_arr_output)
+    # np.save(os.path.join('debug_data', 'validation', f'validation_output.npy'), validation_arr_output)
+    np.save(os.path.join('debug_data', 'test', f'data_info.npy'), np.array(test_team_sess_trial_ring_lst[:len(unique_team)], dtype=object))
 
 if __name__ == '__main__':
     path = '../../data'
