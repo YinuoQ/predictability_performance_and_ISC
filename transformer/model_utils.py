@@ -61,7 +61,7 @@ class CrossModalTransformer(nn.Module):
         super(CrossModalTransformer, self).__init__()
         self.d_model = 64
         self.num_layers = 2
-        self.num_head = 4
+        self.num_head = 2
         self.positional_encoding = PositionalEncoding(self.d_model)
         
         # Convolution layers
@@ -76,7 +76,7 @@ class CrossModalTransformer(nn.Module):
         # Cross-attention layers for each modality as query
         self.cross_attention_layers = nn.ModuleList([
             nn.ModuleList([
-                CrossAttentionLayer(self.d_model, self.num_head) for _ in range(4)
+                CrossAttentionLayer(self.d_model, self.num_head) for _ in range(1)
             ]) for _ in range(self.num_layers)
         ])
         
@@ -103,15 +103,17 @@ class CrossModalTransformer(nn.Module):
         # Tgt size must be (batch_size, tgt sequence length)
         # Embedding + positional encoding - Out size = (batch_size, sequence length, dim_model)
         src1 = self.conv_eeg(src1).squeeze()
-        src2 = self.conv_1d(src2).squeeze()
-        src3 = self.conv_1d(src3).squeeze()
-        src4 = self.conv_1d(src4).squeeze()
+        # src2 = self.conv_1d(src2).squeeze()
+        # src3 = self.conv_1d(src3).squeeze()
+        # src4 = self.conv_1d(src4).squeeze()
 
         src1 = self.positional_encoding(src1)
-        src2 = self.positional_encoding(src2)
-        src3 = self.positional_encoding(src3)
-        src4 = self.positional_encoding(src4)
-        embedded_modalities = [src1, src2, src3, src4]
+        # src2 = self.positional_encoding(src2)
+        # src3 = self.positional_encoding(src3)
+        # src4 = self.positional_encoding(src4)
+        # embedded_modalities = [src1, src2, src3, src4]
+        embedded_modalities = [src1]
+
 
         # Apply cross-attention layers for each modality as query
         for i, layers in enumerate(self.cross_attention_layers):

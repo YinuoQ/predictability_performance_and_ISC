@@ -91,13 +91,10 @@ def main():
                       logger=False,
                       accelerator='gpu', 
                       devices=1)
-
-    a = trainer.test(model)
-    
+    trainer.test(model)
     test_loader = model.test_dataloader()
     predictions = trainer.predict(model, test_loader)
     target = test_loader.dataset.current_data[-1]
-
 
     predicted_output = get_prediction_results(predictions,target)
     np.save(f"{result_save_path}/pred_target.npy", np.vstack([predicted_output, target]))
