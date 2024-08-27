@@ -25,11 +25,11 @@ class PredictAction(Dataset):
 
     def __getitem__(self, idx):
         eeg, pupil, speech, action, out_action = self.current_data
-        selected_eeg = eeg[idx, :]
-        selected_pupil = pupil[idx, :]
-        selected_speech = speech[idx, :]
-        selected_action = action[idx, :]
-        selected_out_action = out_action[idx, :]
+        selected_eeg = eeg[idx]
+        selected_pupil = pupil[idx]
+        selected_speech = speech[idx]
+        selected_action = action[idx]
+        selected_out_action = out_action[idx]
 
         input_eeg = torch.Tensor(selected_eeg)
         input_pupil = torch.Tensor(selected_pupil)
@@ -52,6 +52,7 @@ class PredictAction(Dataset):
         speech = np.load(os.path.join((self.dataset_folder), f'{self.flag}', f'{self.flag}_speech.npy'), allow_pickle=True)
         action = np.load(os.path.join((self.dataset_folder), f'{self.flag}', f'{self.flag}_action.npy'), allow_pickle=True)
         out_action = np.load(os.path.join((self.dataset_folder), f'{self.flag}', f'{self.flag}_output.npy'), allow_pickle=True)
+
         return eeg, pupil, speech, action, out_action
 
     def get_src_trg(self, sequence1: torch.Tensor, sequence2: torch.Tensor, sequence3: torch.Tensor, sequence4: torch.Tensor, output_seq: torch.Tensor):
@@ -86,7 +87,8 @@ class PredictAction(Dataset):
         temp_mean += torch.mean(src2[:,-1])
         temp_mean += torch.mean(src3[:,-1])
         temp_mean += torch.mean(src4[:,-1])
-        trg = [temp_mean.numpy() / 4] + list(output_seq[:-1])
+        trg[0] = temp_mean 
+        trg[1:] = output_seq[:-1]
         # The target sequence against which the model output will be compared to compute loss
         trg_y = output_seq
         # We only want trg_y to consist of the target variable not any potential exogenous variables

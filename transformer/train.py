@@ -34,7 +34,7 @@ def main():
     seed(cfg)
     seed_everything(cfg.seed)
 
-    model_name = cfg.data_filepath.split('/')[-2]
+    model_name = cfg.data_filepath.split('/')[-1]
 
     log_dir = '_'.join([cfg.log_dir,
                         model_name,

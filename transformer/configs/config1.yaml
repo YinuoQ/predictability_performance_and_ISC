@@ -1,14 +1,17 @@
-data_filepath: data/
-epochs: 30
-gamma: 0.5
+data_filepath: data
+epochs: 500
+gamma: 0.2
 if_cuda: True
 log_dir: log
-lr: 0.0001
+lr: 0.000005
 lr_schedule:
 - 20
+- 100
+- 200
+- 400
 num_gpus: 1
 num_workers: 8
-seed: 1
+seed: 1234
 test_batch: 100
 train_batch: 100
 val_batch: 100
