@@ -68,7 +68,7 @@ def get_trialed_EEG_ISC_with_performance(lcoation_df, eeg_df):
             temp_ISC,_ = cca.ISC_eeg(temp_eeg)
             ISC_epoch_lst.append(temp_ISC[0])
 
-        performance_df.at[i, 'eegISC'] = np.tanh(np.nanmean(np.arctanh(ISC_epoch_lst)))
+        performance_df.at[i, 'eegISC'] = np.nanmean(ISC_epoch_lst)
 
     performance_df = performance_df.dropna().reset_index(drop=True)
     performance_df['eegISC'] = pd.to_numeric(performance_df.eegISC)

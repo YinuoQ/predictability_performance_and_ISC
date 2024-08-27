@@ -29,7 +29,7 @@ def get_action_performance(lcoation_df, action_df):
     return action_performance_df
 
 def get_trialed_action_ISC_with_performance(lcoation_df, action_df):
-    warnings.filterwarnings("ignore")
+    warnings.filterwarnings("ignore") 
     performance_df = copy.deepcopy(lcoation_df)
     performance_df = performance_df[['teamID', 'sessionID', 'trialID']].drop_duplicates().reset_index(drop=True)
     performance_df['performance'] = lcoation_df.groupby(['teamID', 'sessionID', 'trialID']).apply(lambda x: x.ringID.max()+1).values
@@ -43,7 +43,7 @@ def get_trialed_action_ISC_with_performance(lcoation_df, action_df):
         for idx in data_ids:
             ISC_epoch_lst.append(ISC_among_actions(action_df.iloc[idx]))
 
-        performance_df.at[i, 'actionISC'] = np.tanh(np.nanmean(np.arctanh(ISC_epoch_lst)))
+        performance_df.at[i, 'actionISC'] = np.nanmean(ISC_epoch_lst)
 
     performance_df = performance_df.dropna().reset_index(drop=True)
     performance_df['actionISC'] = pd.to_numeric(performance_df.actionISC)
@@ -51,15 +51,32 @@ def get_trialed_action_ISC_with_performance(lcoation_df, action_df):
     return performance_df
 
 def ISC_among_actions(action_data, epoch_based=True):
-    
-    cov_mat = np.abs(np.corrcoef(np.array([action_data.yawAction, 
-                                           action_data.pitchAction, 
-                                           action_data.thrustAction])))
-
+    action_arr = np.array([action_data.yawAction, 
+                           action_data.pitchAction, 
+                           action_data.thrustAction])
+    # save_val_flag = [0, 0, 0]
+    # if np.sum(action_arr[0] == action_arr[0,0]) == 90:
+    #     save_val_flag[0] = 1
+    # if np.sum(action_arr[1] == action_arr[1,0]) == 90:
+    #     save_val_flag[1] = 1
+    # if np.sum(action_arr[2] == action_arr[2,0]) == 90:
+    #     save_val_flag[2] = 1
+    # if np.sum(save_val_flag) == 1:
+    #     valid_id_lst = [0,1,2]
+    #     valid_id_lst.remove(list(np.where(np.array(save_val_flag) == 1))[0])
+    #     return np.abs(np.corrcoef(action_arr[valid_id_lst, :])[0,1])
+    # elif np.sum(save_val_flag) == 2:
+    #     same_val_id1, same_val_id2 = np.where(np.array(save_val_flag) == 1)[0][0], np.where(np.array(save_val_flag) == 1)[0][1]
+    #     if action_arr[same_val_id1, 0] == action_arr[same_val_id2, 0]:
+    #         # same action for two player
+    #         return 2/3
+    #     else:
+    #         return 0
+    # else:
+    cov_mat = np.abs(np.corrcoef(action_arr))
     r_xy = cov_mat[0,1]
     r_xz = cov_mat[0,2]
     r_yz = cov_mat[1,2]
-
     z_xy = np.arctanh(r_xy)
     z_xz = np.arctanh(r_xz)
     z_yz = np.arctanh(r_yz)

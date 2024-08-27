@@ -73,7 +73,7 @@ def get_trialed_pupil_ISC_with_performance(lcoation_df, pupil_df):
         for idx in data_ids:
             ISC_epoch_lst.append(ISC_among_pupil(pupil_df.iloc[idx]))
 
-        performance_df.at[i, 'pupilISC'] = np.tanh(np.nanmean(np.arctanh(ISC_epoch_lst)))
+        performance_df.at[i, 'pupilISC'] = np.nanmean(ISC_epoch_lst)
 
     performance_df = performance_df.dropna().reset_index(drop=True)
     performance_df['pupilISC'] = pd.to_numeric(performance_df.pupilISC)

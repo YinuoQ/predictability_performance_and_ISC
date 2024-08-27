@@ -80,7 +80,7 @@ def get_trialed_speech_ISC_with_performance(lcoation_df, speech_df):
         for idx in data_ids:
             ISC_epoch_lst.append(ISC_among_speech(speech_df.iloc[idx]))
 
-        performance_df.at[i, 'speechISC'] = np.tanh(np.nanmean(np.arctanh(ISC_epoch_lst)))
+        performance_df.at[i, 'speechISC'] = np.nanmean(ISC_epoch_lst)
 
     performance_df = performance_df.dropna().reset_index(drop=True)
     performance_df['speechISC'] = pd.to_numeric(performance_df.speechISC)
