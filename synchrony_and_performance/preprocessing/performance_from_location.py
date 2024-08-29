@@ -35,6 +35,8 @@ def get_performance_from_location(location_df):
         performance = 1 - relative_time * diviation
         performance_df.at[i, 'performance'] = performance
     return performance_df
+
+
 if __name__ == '__main__':
     path = '../../data'
 
