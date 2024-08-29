@@ -63,7 +63,7 @@ class ActionPredictionModel(pl.LightningModule):
     
     def training_step(self, batch, batch_idx):
         src1, src2, src3, src4, trg, trg_y = batch
-        pred_output = self.model(src1, src2, src3, src4, trg) 
+        pred_output = self.model(src1, src2, src3, src4) 
 
         train_acc = self.correlation_arruracy(pred_output, trg_y)
         train_loss = self.loss_func(pred_output, trg_y.long()+1)
@@ -76,7 +76,7 @@ class ActionPredictionModel(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         src1, src2, src3, src4, trg, trg_y = batch
-        pred_output = self.model(src1, src2, src3, src4, trg) 
+        pred_output = self.model(src1, src2, src3, src4) 
 
         val_acc = self.correlation_arruracy(pred_output, trg_y)
         val_loss = self.loss_func(pred_output, trg_y.long()+1)
@@ -90,7 +90,7 @@ class ActionPredictionModel(pl.LightningModule):
         torch.set_grad_enabled(True)
 
         src1, src2, src3, src4, trg, trg_y = batch   
-        pred_output = self.model(src1, src2, src3, src4, trg)     
+        pred_output = self.model(src1, src2, src3, src4)     
         test_acc = self.correlation_arruracy(pred_output, trg_y)
         test_loss = self.loss_func(pred_output, trg_y.long()+1)
 
@@ -106,7 +106,7 @@ class ActionPredictionModel(pl.LightningModule):
     
     def predict_step(self, batch, batch_idx: int , dataloader_idx: int = None):
         src1, src2, src3, src4, trg, trg_y = batch   
-        pred_output = self.model(src1, src2, src3, src4, trg)     
+        pred_output = self.model(src1, src2, src3, src4)     
 
         return pred_output
     
