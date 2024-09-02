@@ -25,6 +25,7 @@ def seed(cfg):
     torch.manual_seed(cfg.seed)
     if cfg.if_cuda:
         torch.cuda.manual_seed(cfg.seed)
+        torch.cuda.manual_seed_all(cfg.seed)
 
 def main():
     config_filepath = str(sys.argv[1])
@@ -63,6 +64,7 @@ def main():
     # define trainer
     trainer = Trainer(max_epochs=cfg.epochs,
                       default_root_dir=log_dir,
+                      deterministic=True,
                       callbacks=checkpoint_callback,
                       amp_backend='native',
                       accelerator="gpu",
