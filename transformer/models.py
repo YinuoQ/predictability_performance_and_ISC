@@ -41,37 +41,36 @@ class ActionPredictionModel(pl.LightningModule):
         # loss
         # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         # class_weights = torch.tensor([2.9, 0.3, 1.7]).to(device)
-        # self.loss_func = nn.CrossEntropyLoss(reduction='none', weight=class_weights)
-        self.loss_func = nn.L1Loss()
+        self.loss_func = nn.CrossEntropyLoss(reduction='none')#, weight=class_weights)
+        # self.loss_func = nn.L1Loss()
 
         # accuracy
-        # self.accuracy_func = classification.Accuracy(task="multiclass", num_classes=3)
+        self.accuracy_func = classification.Accuracy(task="multiclass", num_classes=3)
         # self.accuracy_func = classification.Accuracy()
 
 
     def correlation_arruracy(self, prediction, target):
-        # pred = torch.argmax(prediction, dim=1).float()
-        # targ = target+1
-        # pearson_r_lst = []
-        # for i in range(len(pred)):
-        #     if (pred[i] == targ[i]).sum() == 30:
-        #         pearson_r_lst.append(torch.Tensor([1]))
-        #     elif (pred[i] == pred[i,0]).sum() == 30 or (targ[i] == targ[i,0]).sum() == 30:
-        #         pearson_r_lst.append(torch.Tensor([0]))
-        #     else:
-        #         pearson_r_lst.append(torch.abs(torch.corrcoef(torch.stack((pred[i], targ[i])))[0,1]))
-        # output = torch.nanmean(torch.FloatTensor(pearson_r_lst)) 
+        pred = torch.argmax(prediction, dim=1).float()
+        targ = target+1
+        pearson_r_lst = []
+        for i in range(len(pred)):
+            if (pred[i] == targ[i]).sum() == 30:
+                pearson_r_lst.append(torch.Tensor([1]))
+            elif (pred[i] == pred[i,0]).sum() == 30 or (targ[i] == targ[i,0]).sum() == 30:
+                pearson_r_lst.append(torch.Tensor([0]))
+            else:
+                pearson_r_lst.append(torch.abs(torch.corrcoef(torch.stack((pred[i], targ[i])))[0,1]))
+        output = torch.nanmean(torch.FloatTensor(pearson_r_lst)) 
         # output = self.accuracy_func(prediction, target)
  
-        output = -torch.sum(torch.abs(prediction - target))
+        # output = -torch.sum(torch.abs(prediction - target))
         return output
     
     def training_step(self, batch, batch_idx):
-        src1, src2, src3, src4, src5, trg_y = batch
-        pred_output = torch.squeeze(self.model(src1, src2, src3, src4, src5)) 
-
+        src1, src2, src3, src4, src5, tgt, trg_y = batch   
+        pred_output = self.model(src1, src2, src3, src4, src5, tgt)
         train_acc = self.correlation_arruracy(pred_output, trg_y)
-        train_loss = self.loss_func(pred_output, trg_y)
+        train_loss = self.loss_func(pred_output, trg_y.long()+1).mean()
 
         self.log('train_loss', train_loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         self.log('train_acc', train_acc, on_step=True, on_epoch=True, prog_bar=True, logger=True)
@@ -80,11 +79,11 @@ class ActionPredictionModel(pl.LightningModule):
 
 
     def validation_step(self, batch, batch_idx):
-        src1, src2, src3, src4, src5, trg_y = batch
-        pred_output = torch.squeeze(self.model(src1, src2, src3, src4, src5)) 
-
+        src1, src2, src3, src4, src5, tgt, trg_y = batch   
+        pred_output = self.model(src1, src2, src3, src4, src5, tgt)
+        
         val_acc = self.correlation_arruracy(pred_output, trg_y)
-        val_loss = self.loss_func(pred_output, trg_y)
+        val_loss = self.loss_func(pred_output, trg_y.long()+1).mean()
         self.log('val_loss', val_loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         self.log('val_acc', val_acc, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         return val_loss
@@ -93,10 +92,10 @@ class ActionPredictionModel(pl.LightningModule):
     def test_step(self, batch, batch_idx):
         torch.set_grad_enabled(True)
 
-        src1, src2, src3, src4, src5, trg_y = batch   
-        pred_output = torch.squeeze(self.model(src1, src2, src3, src4, src5)) 
+        src1, src2, src3, src4, src5, tgt, trg_y = batch   
+        pred_output = self.model(src1, src2, src3, src4, src5, tgt)
         test_acc = self.correlation_arruracy(pred_output, trg_y)
-        test_loss = self.loss_func(pred_output, trg_y)
+        test_loss = self.loss_func(pred_output, trg_y.long()+1).mean()
 
         self.log('test_loss', test_loss)
         self.log('test_acc', test_acc)
@@ -108,8 +107,8 @@ class ActionPredictionModel(pl.LightningModule):
         return [optimizer], [scheduler]
     
     def predict_step(self, batch, batch_idx: int , dataloader_idx: int = None):
-        src1, src2, src3, src4, src5, trg_y = batch   
-        pred_output = self.model(src1, src2, src3, src4, src5)     
+        src1, src2, src3, src4, src5, tgt, trg_y = batch   
+        pred_output = self.model(src1, src2, src3, src4, src5, tgt)     
 
         return pred_output
     

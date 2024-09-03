@@ -2,7 +2,7 @@ data_filepath: data
 epochs: 100
 gamma: 0.8
 if_cuda: True
-log_dir: log_yaw
+log_dir: log_pitch
 lr: 0.00005
 lr_schedule:
 - 50
@@ -13,4 +13,4 @@ seed: 1234
 test_batch: 100
 train_batch: 500
 val_batch: 100
-role: yaw
+role: pitch

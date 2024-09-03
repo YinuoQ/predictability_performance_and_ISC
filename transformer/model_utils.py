@@ -166,7 +166,7 @@ class AdaptiveConvLayer(nn.Module):
 class AdaptiveConv2dLayer(nn.Module):
     def __init__(self, out_chann):
         super(AdaptiveConv2dLayer, self).__init__()
-        self.conv2d = nn.Conv2d(in_channels=3, out_channels=out_chann, kernel_size=(20, 2), stride=(1, 4))
+        self.conv2d = nn.Conv2d(in_channels=2, out_channels=out_chann, kernel_size=(20, 2), stride=(1, 4))
 
     def forward(self, x):
         x = self.conv2d(x)  # Apply 2D convolution
@@ -194,13 +194,15 @@ class CrossModalTransformer(nn.Module):
         self.conv_output_dim = 8
         # Adaptive convolutional layers for each modality
         self.eeg_conv = AdaptiveConv2dLayer(self.conv_output_dim)
-        self.pupil_conv = AdaptiveConvLayer(3, self.conv_output_dim)
-        self.speech_conv = AdaptiveConvLayer(3, self.conv_output_dim)
-        self.action_conv = AdaptiveConvLayer(3, self.conv_output_dim)
+        self.pupil_conv = AdaptiveConvLayer(2, self.conv_output_dim)
+        self.speech_conv = AdaptiveConvLayer(2, self.conv_output_dim)
+        self.action_conv = AdaptiveConvLayer(2, self.conv_output_dim)
         self.location_conv = AdaptiveConvLayer(3, self.conv_output_dim)
-        
+        self.tgt_conv = AdaptiveConvLayer(1, self.conv_output_dim)
+
         # Positional encoding
         self.pos_encoder = PositionalEncoding(self.conv_output_dim)
+        self.tgt_encoder = PositionalEncoding(self.conv_output_dim*4)
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
         # normalization
@@ -235,17 +237,18 @@ class CrossModalTransformer(nn.Module):
         self.sa_ac = nn.MultiheadAttention(int(self.conv_output_dim), self.num_heads, batch_first=True, dropout=0.2)
         
         # Final layers
-        self.fc1 = nn.Linear(in_features=2048, out_features=1)
+        self.fc1 = nn.Linear(in_features=960, out_features=90)
         # self.fc2 = nn.Linear(in_features=256, out_features=3*time_steps)
         self.num_classes = num_classes
         self.time_steps = time_steps
-        self.signmoid = nn.Sigmoid()
-   
+        decoder_layer = nn.TransformerDecoderLayer(d_model=self.conv_output_dim*4, nhead=self.num_heads, batch_first=True)
+        self.decoder = nn.TransformerDecoder(decoder_layer, num_layers=1)
+
     def generate_square_subsequent_mask(self, sz):
         mask = (torch.triu(torch.ones(sz, sz)) == 1).transpose(0, 1)
         mask = mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0))
         return mask
-    def forward(self, eeg, pupil, speech, action, location):
+    def forward(self, eeg, pupil, speech, action, location, tgt):
         # Apply adaptive convolution
 
         eeg = self.eeg_conv(eeg)
@@ -330,16 +333,15 @@ class CrossModalTransformer(nn.Module):
         
         # Concatenate modalities
         concatenated = torch.cat([eeg_self, pupil_self, speech_self, action_self], dim=-1)
+        
 
-        # concatenated = self.norm2(concatenated.view(eeg.shape[0], -1))
+        tgt = self.tgt_encoder(tgt[:,:,None])  # Apply positional encoding to the target
+        tgt_mask = self.generate_square_subsequent_mask(tgt.size(1)).to(self.device)
+        output = self.decoder(tgt, concatenated, tgt_mask=tgt_mask)
 
         # Final output layer
-        output = self.fc1(concatenated.view(eeg.shape[0], -1))
+        output = self.fc1(output.view(eeg.shape[0], -1))
         # output = self.fc2(output)
-        # output = output.view(eeg.shape[0], 3, 30)
-        # import IPython
-        # IPython.embed()
-        # assert False
-        output = self.signmoid(output)
-   
+        output = output.view(eeg.shape[0], 3, 30)
+ 
         return output
