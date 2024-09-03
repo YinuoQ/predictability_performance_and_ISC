@@ -153,10 +153,14 @@ class AdaptiveConvLayer(nn.Module):
     def __init__(self, in_chenn_len, out_chann):
         super(AdaptiveConvLayer, self).__init__()
         self.conv = nn.Conv1d(in_chenn_len, out_chann, kernel_size=1, stride=1, padding=2)
+        self.conv_loc = nn.Conv1d(in_chenn_len, out_chann, kernel_size=2, stride=1, padding=2)
     
     def forward(self, x):
         # Flatten the time dimension if necessary
-        x = self.conv(x)
+        if x.shape[2] == 60:
+            x = self.conv(x)
+        else:
+            x = self.conv_loc(x)
         return x.permute(0,2,1)
 
 class AdaptiveConv2dLayer(nn.Module):
@@ -304,10 +308,10 @@ class CrossModalTransformer(nn.Module):
         # action_cross_location = self.norm(action_cross_location)
 
         # Sum the outputs of cross-attention for each modality
-        eeg_final = eeg_cross_pupil + eeg_cross_speech + eeg_cross_action + eeg_cross_location
-        pupil_final = pupil_cross_eeg + pupil_cross_speech + pupil_cross_action + pupil_cross_location
-        speech_final = speech_cross_eeg + speech_cross_pupil + speech_cross_action + speech_cross_location
-        action_final = action_cross_eeg + action_cross_pupil + action_cross_speech + action_cross_location
+        eeg_final = eeg_cross_pupil + eeg_cross_speech + eeg_cross_action + eeg_cross_location*2
+        pupil_final = pupil_cross_eeg + pupil_cross_speech + pupil_cross_action + pupil_cross_location*2
+        speech_final = speech_cross_eeg + speech_cross_pupil + speech_cross_action + speech_cross_location*2
+        action_final = action_cross_eeg + action_cross_pupil + action_cross_speech + action_cross_location*2
         # eeg_final = torch.cat([eeg_cross_pupil, eeg_cross_speech, eeg_cross_action, eeg_cross_location], axis=2)
         # pupil_final = torch.cat([pupil_cross_eeg , pupil_cross_speech , pupil_cross_action , pupil_cross_location], axis=2)
         # speech_final = torch.cat([speech_cross_eeg , speech_cross_pupil , speech_cross_action, speech_cross_location], axis=2)
