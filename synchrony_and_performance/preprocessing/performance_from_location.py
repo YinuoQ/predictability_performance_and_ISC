@@ -43,3 +43,4 @@ if __name__ == '__main__':
     pd.set_option('display.max_columns', None)
     location_df = read_data(path)
     performance_df = get_performance_from_location(location_df)
+
