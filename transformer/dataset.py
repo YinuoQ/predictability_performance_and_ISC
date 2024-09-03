@@ -6,10 +6,11 @@ from torch.utils.data import Dataset
 
 
 class PredictAction(Dataset):
-    def __init__(self, flag, seed, dataset_folder):
+    def __init__(self, flag, seed, dataset_folder, role):
         super().__init__()
         self.time_out = 30
         self.flag = flag
+        self.role = role
 
         self.seed = seed
         self.dataset_folder = dataset_folder
@@ -46,12 +47,12 @@ class PredictAction(Dataset):
         return src1, src2, src3, src4, src5, trg_y
     
     def get_current_data(self):
-        eeg = np.load(os.path.join((self.dataset_folder), f'{self.flag}', f'{self.flag}_eeg.npy'), allow_pickle=True)
-        pupil = np.load(os.path.join((self.dataset_folder), f'{self.flag}', f'{self.flag}_pupil.npy'), allow_pickle=True)
-        speech = np.load(os.path.join((self.dataset_folder), f'{self.flag}', f'{self.flag}_speech.npy'), allow_pickle=True)
-        action = np.load(os.path.join((self.dataset_folder), f'{self.flag}', f'{self.flag}_action.npy'), allow_pickle=True)
-        location = np.load(os.path.join((self.dataset_folder), f'{self.flag}', f'{self.flag}_location.npy'), allow_pickle=True)
-        out_action = np.load(os.path.join((self.dataset_folder), f'{self.flag}', f'{self.flag}_output.npy'), allow_pickle=True)
+        eeg = np.load(os.path.join((self.dataset_folder), f'{self.flag}', f'{self.role}', f'{self.flag}_eeg.npy'), allow_pickle=True)
+        pupil = np.load(os.path.join((self.dataset_folder), f'{self.flag}', f'{self.role}', f'{self.flag}_pupil.npy'), allow_pickle=True)
+        speech = np.load(os.path.join((self.dataset_folder), f'{self.flag}', f'{self.role}', f'{self.flag}_speech.npy'), allow_pickle=True)
+        action = np.load(os.path.join((self.dataset_folder), f'{self.flag}', f'{self.role}', f'{self.flag}_action.npy'), allow_pickle=True)
+        location = np.load(os.path.join((self.dataset_folder), f'{self.flag}', f'{self.role}', f'{self.flag}_location.npy'), allow_pickle=True)
+        out_action = np.load(os.path.join((self.dataset_folder), f'{self.flag}', f'{self.role}', f'{self.flag}_output.npy'), allow_pickle=True)
 
         return eeg, pupil, speech, action, location, out_action
 

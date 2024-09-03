@@ -28,7 +28,8 @@ class ActionPredictionModel(pl.LightningModule):
                  test_batch: int=1400,
                  num_workers: int=8,
                  data_filepath: str='data',
-                 lr_schedule: list=[100000]) -> None:
+                 lr_schedule: list=[100000],
+                 role: str='yaw') -> None:
         super().__init__()
         self.save_hyperparameters()
         self.kwargs = {'num_workers': self.hparams.num_workers, 'pin_memory': True} if self.hparams.if_cuda else {}
@@ -111,15 +112,18 @@ class ActionPredictionModel(pl.LightningModule):
         if stage == 'fit':
             self.train_dataset = PredictAction(flag='train',
                                                seed=self.hparams.seed,
+                                               role=self.hparams.role,
                                                dataset_folder=self.hparams.data_filepath)
             
             self.val_dataset = PredictAction(flag='validation',
                                              seed=self.hparams.seed,
+                                             role=self.hparams.role,
                                              dataset_folder=self.hparams.data_filepath)
         
         if stage == 'test':
             self.test_dataset = PredictAction(flag='test',
                                               seed=self.hparams.seed,
+                                              role=self.hparams.role,
                                               dataset_folder=self.hparams.data_filepath)
 
 
