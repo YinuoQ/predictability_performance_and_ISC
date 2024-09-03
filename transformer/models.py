@@ -40,7 +40,7 @@ class ActionPredictionModel(pl.LightningModule):
         # loss
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         class_weights = torch.tensor([2.9, 0.3, 1.7]).to(device)
-        self.loss_func = nn.CrossEntropyLoss(reduction='none', weight=class_weights)
+        self.loss_func = nn.CrossEntropyLoss(reduction='none')#, weight=class_weights)
 
         # accuracy
         self.accuracy_func = classification.Accuracy(task="multiclass", num_classes=3)

@@ -68,7 +68,8 @@ def main():
                       callbacks=checkpoint_callback,
                       amp_backend='native',
                       accelerator="gpu",
-                      devices=1)
+                      devices=1,
+                      log_every_n_steps=10)
 
     trainer.fit(model)
 

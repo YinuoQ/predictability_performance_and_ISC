@@ -1,15 +1,12 @@
 data_filepath: data
-epochs: 50
-gamma: 0.1
+epochs: 100
+gamma: 0.8
 if_cuda: True
 log_dir: log
-lr: 0.0001
+lr: 0.000001
 lr_schedule:
-- 5
-- 10
-- 20
-- 300
-- 500
+- 40
+- 90
 num_gpus: 1
 num_workers: 8
 seed: 1234
