@@ -13,10 +13,10 @@ def read_data(path):
     pupil_df = pd.read_pickle(os.path.join(path, 'epoched_pupil.pkl'))
     eeg_df = pd.read_pickle(os.path.join(path, 'epoched_eeg.pkl'))
     speech_df = pd.read_pickle(os.path.join(path, 'epoched_speech_event.pkl'))
-    
-    return action_df, location_df, pupil_df, eeg_df, speech_df
+    ring_df = pd.read_pickle(os.path.join(path, 'epoched_raw_location.pkl'))
+    return action_df, location_df, pupil_df, eeg_df, speech_df, ring_df
 
-def transformer_data_generator(action_df, location_df, pupil_df, eeg_df, speech_df):
+def transformer_data_generator(action_df, location_df, pupil_df, eeg_df, speech_df, ring_df):
     eeg_df['yawAction'] = None
     eeg_df['pitchAction'] = None
     eeg_df['thrustAction'] = None
@@ -35,7 +35,9 @@ def transformer_data_generator(action_df, location_df, pupil_df, eeg_df, speech_
         temp_speech = speech_df.query(query_string)
         temp_pupil = pupil_df.query(query_string)
         temp_location = location_df.query(query_string)
-        eeg_df.at[i, 'location'] = temp_location.location.iloc[0]
+        temp_ring = ring_df.query(query_string)
+
+        eeg_df.at[i, 'location'] = np.concatenate((temp_location.location.iloc[0], np.array(temp_ring[['ringX', 'ringY', 'ringZ']]).T), axis=1)
         if len(temp_action) == 1:
             eeg_df.at[i, 'yawAction'] = temp_action.yawAction.iloc[0]
             eeg_df.at[i, 'pitchAction'] = temp_action.pitchAction.iloc[0]
@@ -184,8 +186,8 @@ if __name__ == '__main__':
     seed = 1234
 
     pd.set_option('display.max_columns', None)
-    action_df, location_df, pupil_df, eeg_df, speech_df = read_data(path)
-    transformer_data_df = transformer_data_generator(action_df, location_df, pupil_df, eeg_df, speech_df)   
+    action_df, location_df, pupil_df, eeg_df, speech_df, ring_df = read_data(path)
+    transformer_data_df = transformer_data_generator(action_df, location_df, pupil_df, eeg_df, speech_df, ring_df)   
     generate_training_testing_val_dataset(transformer_data_df, seed)
     
 
