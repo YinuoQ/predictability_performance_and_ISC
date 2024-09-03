@@ -100,7 +100,7 @@ def main():
     target = test_loader.dataset.current_data[-1]
 
     predicted_output = get_prediction_results(predictions, target, cfg.role)
-    np.save(f"{result_save_path}/pred_target.npy", np.vstack([predicted_output, target]))
+    np.save(f"{result_save_path}/pred_target.npy", np.vstack([predicted_output, target.flatten()]))
 
 
 
