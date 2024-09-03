@@ -166,7 +166,7 @@ class AdaptiveConvLayer(nn.Module):
 class AdaptiveConv2dLayer(nn.Module):
     def __init__(self, out_chann):
         super(AdaptiveConv2dLayer, self).__init__()
-        self.conv2d = nn.Conv2d(in_channels=2, out_channels=out_chann, kernel_size=(20, 2), stride=(1, 4))
+        self.conv2d = nn.Conv2d(in_channels=3, out_channels=out_chann, kernel_size=(20, 2), stride=(1, 4))
 
     def forward(self, x):
         x = self.conv2d(x)  # Apply 2D convolution
@@ -194,9 +194,9 @@ class CrossModalTransformer(nn.Module):
         self.conv_output_dim = 8
         # Adaptive convolutional layers for each modality
         self.eeg_conv = AdaptiveConv2dLayer(self.conv_output_dim)
-        self.pupil_conv = AdaptiveConvLayer(2, self.conv_output_dim)
-        self.speech_conv = AdaptiveConvLayer(2, self.conv_output_dim)
-        self.action_conv = AdaptiveConvLayer(2, self.conv_output_dim)
+        self.pupil_conv = AdaptiveConvLayer(3, self.conv_output_dim)
+        self.speech_conv = AdaptiveConvLayer(3, self.conv_output_dim)
+        self.action_conv = AdaptiveConvLayer(3, self.conv_output_dim)
         self.location_conv = AdaptiveConvLayer(3, self.conv_output_dim)
         
         # Positional encoding
@@ -235,10 +235,11 @@ class CrossModalTransformer(nn.Module):
         self.sa_ac = nn.MultiheadAttention(int(self.conv_output_dim), self.num_heads, batch_first=True, dropout=0.2)
         
         # Final layers
-        self.fc1 = nn.Linear(in_features=2048, out_features=3*time_steps)
+        self.fc1 = nn.Linear(in_features=2048, out_features=1)
         # self.fc2 = nn.Linear(in_features=256, out_features=3*time_steps)
         self.num_classes = num_classes
         self.time_steps = time_steps
+        self.signmoid = nn.Sigmoid()
    
     def generate_square_subsequent_mask(self, sz):
         mask = (torch.triu(torch.ones(sz, sz)) == 1).transpose(0, 1)
@@ -308,10 +309,10 @@ class CrossModalTransformer(nn.Module):
         # action_cross_location = self.norm(action_cross_location)
 
         # Sum the outputs of cross-attention for each modality
-        eeg_final = eeg_cross_pupil + eeg_cross_speech + eeg_cross_action + eeg_cross_location*2
-        pupil_final = pupil_cross_eeg + pupil_cross_speech + pupil_cross_action + pupil_cross_location*2
-        speech_final = speech_cross_eeg + speech_cross_pupil + speech_cross_action + speech_cross_location*2
-        action_final = action_cross_eeg + action_cross_pupil + action_cross_speech + action_cross_location*2
+        eeg_final = eeg_cross_pupil + eeg_cross_speech + eeg_cross_action + eeg_cross_location
+        pupil_final = pupil_cross_eeg + pupil_cross_speech + pupil_cross_action + pupil_cross_location
+        speech_final = speech_cross_eeg + speech_cross_pupil + speech_cross_action + speech_cross_location
+        action_final = action_cross_eeg + action_cross_pupil + action_cross_speech + action_cross_location
         # eeg_final = torch.cat([eeg_cross_pupil, eeg_cross_speech, eeg_cross_action, eeg_cross_location], axis=2)
         # pupil_final = torch.cat([pupil_cross_eeg , pupil_cross_speech , pupil_cross_action , pupil_cross_location], axis=2)
         # speech_final = torch.cat([speech_cross_eeg , speech_cross_pupil , speech_cross_action, speech_cross_location], axis=2)
@@ -328,15 +329,17 @@ class CrossModalTransformer(nn.Module):
         # action_self = self.norm(action_self)
         
         # Concatenate modalities
-        concatenated = torch.cat([eeg_self, pupil_self, speech_self, action_self], dim=1)
+        concatenated = torch.cat([eeg_self, pupil_self, speech_self, action_self], dim=-1)
 
         # concatenated = self.norm2(concatenated.view(eeg.shape[0], -1))
-        # import IPython
-        # IPython.embed()
-        # assert False
+
         # Final output layer
         output = self.fc1(concatenated.view(eeg.shape[0], -1))
         # output = self.fc2(output)
-        output = output.view(eeg.shape[0], 3, 30)
-        output = torch.softmax(output, dim=1)
+        # output = output.view(eeg.shape[0], 3, 30)
+        # import IPython
+        # IPython.embed()
+        # assert False
+        output = self.signmoid(output)
+   
         return output

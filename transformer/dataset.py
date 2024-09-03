@@ -21,20 +21,20 @@ class PredictAction(Dataset):
         return int(self.current_data[0].shape[0])
 
     def __getitem__(self, idx):
-        eeg, pupil, speech, action, location, out_action = self.current_data
+        eeg, pupil, speech, action, location, out_performance = self.current_data
         selected_eeg = eeg[idx]
         selected_pupil = pupil[idx]
         selected_speech = speech[idx]
         selected_action = action[idx]
         selected_location = location[idx]
-        selected_out_action = out_action[idx]
+        selected_out_performance = out_performance[idx]
 
         input_eeg = torch.Tensor(selected_eeg)
         input_pupil = torch.Tensor(selected_pupil)
         input_speech = torch.Tensor(selected_speech)
         input_action = torch.Tensor(selected_action)
         input_location = torch.Tensor(selected_location)
-        output_data = torch.Tensor(selected_out_action)
+        output_data = selected_out_performance
 
         src1, src2, src3, src4, src5, trg_y = self.get_src_trg(
         sequence1=input_eeg,
@@ -47,13 +47,13 @@ class PredictAction(Dataset):
         return src1, src2, src3, src4, src5, trg_y
     
     def get_current_data(self):
-        eeg = np.load(os.path.join((self.dataset_folder), f'{self.flag}', f'{self.role}', f'{self.flag}_eeg.npy'), allow_pickle=True)
-        pupil = np.load(os.path.join((self.dataset_folder), f'{self.flag}', f'{self.role}', f'{self.flag}_pupil.npy'), allow_pickle=True)
-        speech = np.load(os.path.join((self.dataset_folder), f'{self.flag}', f'{self.role}', f'{self.flag}_speech.npy'), allow_pickle=True)
-        action = np.load(os.path.join((self.dataset_folder), f'{self.flag}', f'{self.role}', f'{self.flag}_action.npy'), allow_pickle=True)
-        location = np.load(os.path.join((self.dataset_folder), f'{self.flag}', f'{self.role}', f'{self.flag}_location.npy'), allow_pickle=True)
-        out_action = np.load(os.path.join((self.dataset_folder), f'{self.flag}', f'{self.role}', f'{self.flag}_output.npy'), allow_pickle=True)
-
+        eeg = np.load(os.path.join((self.dataset_folder), f'{self.flag}', f'{self.flag}_eeg.npy'), allow_pickle=True)
+        pupil = np.load(os.path.join((self.dataset_folder), f'{self.flag}', f'{self.flag}_pupil.npy'), allow_pickle=True)
+        speech = np.load(os.path.join((self.dataset_folder), f'{self.flag}', f'{self.flag}_speech.npy'), allow_pickle=True)
+        action = np.load(os.path.join((self.dataset_folder), f'{self.flag}', f'{self.flag}_action.npy'), allow_pickle=True)
+        location = np.load(os.path.join((self.dataset_folder), f'{self.flag}', f'{self.flag}_location.npy'), allow_pickle=True)
+        out_action = np.load(os.path.join((self.dataset_folder), f'{self.flag}', f'{self.flag}_output.npy'), allow_pickle=True)
+  
         return eeg, pupil, speech, action, location, out_action
 
     def get_src_trg(self, sequence1: torch.Tensor, sequence2: torch.Tensor, sequence3: torch.Tensor, sequence4: torch.Tensor, sequence5: torch.Tensor, output_seq: torch.Tensor):

@@ -35,16 +35,16 @@ def seed(cfg):
         torch.cuda.manual_seed(cfg.seed)
 
 def get_prediction_results(batch_prediction, target):
-    prediction_output_lst = []
-    for i in range(len(batch_prediction)):
-        prediction_output_lst.append(np.array(torch.argmax(batch_prediction[i], dim=1).float().to('cpu')) - 1)
-    plt.figure(figsize=(200, 6), dpi=100)
-    plt.plot(np.vstack(prediction_output_lst).flatten(), 'o-')
-    plt.plot(target.flatten(), '.-', alpha=0.5)
+    # prediction_output_lst = []
+    # for i in range(len(batch_prediction)):
+    #     prediction_output_lst.append(np.array(torch.argmax(batch_prediction[i], dim=1).float().to('cpu')) - 1)
+    plt.figure(figsize=(20, 6), dpi=100)
+    plt.plot(np.concatenate(batch_prediction).flatten(), 'o')
+    plt.plot(target.flatten(), 'o', alpha=0.5)
     plt.savefig('prediction_results.png', bbox_inches='tight', pad_inches=0)
     plt.close()
 
-    return np.vstack(prediction_output_lst)
+    return np.concatenate(batch_prediction).flatten()
 
 
 def main():
@@ -93,6 +93,7 @@ def main():
                       accelerator='gpu', 
                       devices=1)
     trainer.test(model)
+
     test_loader = model.test_dataloader()
     predictions = trainer.predict(model, test_loader)
     target = test_loader.dataset.current_data[-1]

@@ -3,10 +3,9 @@ epochs: 100
 gamma: 0.8
 if_cuda: True
 log_dir: log
-lr: 0.00001
+lr: 0.00005
 lr_schedule:
-- 40
-- 60
+- 50
 - 80
 num_gpus: 1
 num_workers: 8
