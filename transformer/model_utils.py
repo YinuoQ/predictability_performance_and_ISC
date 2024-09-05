@@ -191,7 +191,7 @@ class CrossModalTransformer(nn.Module):
         # Concatenate modalities
         concatenated = torch.cat([eeg_self, pupil_self, speech_self, action_self], dim=-1)
         
-
+        # should remove tgt encoder here
         tgt = self.tgt_encoder(tgt[:,:,None])  # Apply positional encoding to the target
         tgt_mask = self.generate_square_subsequent_mask(tgt.size(1)).to(self.device)
         output = self.decoder(tgt, concatenated, tgt_mask=tgt_mask)

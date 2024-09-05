@@ -40,8 +40,8 @@ def get_prediction_results(batch_prediction, target, role):
         prediction_output_lst.append(np.array(torch.argmax(batch_prediction[i], dim=1).float().to('cpu')) - 1)
 
     plt.figure(figsize=(200, 6), dpi=100)
-    plt.plot(np.vstack(prediction_output_lst).flatten(), '-o')
-    plt.plot(target.flatten(), '-o', alpha=0.5)
+    plt.plot(target.flatten(), '-o')
+    plt.plot(np.vstack(prediction_output_lst).flatten(), '-o', alpha=0.5)
     plt.savefig(f'prediction_results_{role}.png', bbox_inches='tight', pad_inches=0)
     plt.close()
 
