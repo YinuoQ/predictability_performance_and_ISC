@@ -91,7 +91,7 @@ class ActionPredictionModel(pl.LightningModule):
         
     def test_step(self, batch, batch_idx):
         torch.set_grad_enabled(True)
-
+    
         src1, src2, src3, src4, src5, tgt, trg_y = batch   
         pred_output = self.model(src1, src2, src3, src4, src5, tgt)
         test_acc = self.correlation_arruracy(pred_output, trg_y)

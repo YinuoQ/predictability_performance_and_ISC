@@ -83,7 +83,7 @@ class PredictAction(Dataset):
 
         # The target sequence against which the model output will be compared to compute loss   
         last_element = torch.tensor([(torch.mean(src1[:,:,-1]) + torch.mean(src2[:,-1]) + torch.mean(src3[:,-1]) + torch.mean(src4[:,-1]) + torch.mean(src5[:,-1]))/5])
-
+        
         tgt = torch.cat((last_element, output_seq[:-1]), dim=0)
         trg_y = output_seq
         # We only want trg_y to consist of the target variable not any potential exogenous variables
