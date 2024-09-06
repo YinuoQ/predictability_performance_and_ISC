@@ -122,7 +122,10 @@ def reformat_input_output_data(input_output_lst):
     return eeg_pp_action_speech_loc, np.vstack(input_output_arr[9::10])
 
 def generate_training_testing_val_dataset(data_df, seed=1, data_split_ratio=(0.75, 0.2, 0.05)):
-    unique_team = data_df['teamID'].unique()
+    import IPython
+    IPython.embed()
+    assert False    
+    unique_team = data_df[['teamID', 'sessionID']].drop_duplicates().reset_index(drop=True)
 
     role_lst = ['yaw', 'pitch', 'thrust']
 
@@ -131,8 +134,8 @@ def generate_training_testing_val_dataset(data_df, seed=1, data_split_ratio=(0.7
         testing_lst = []
         validation_lst = []
         test_team_sess_trial_ring_lst = []
-        for team_id in unique_team:
-            temp_data_df = data_df[data_df.teamID == team_id]
+        for team_id in unique_team.iterrows():
+            temp_data_df = data_df[(data_df.teamID == team_id[1].teamID)&(data_df.sessionID == team_id[1].sessionID)]
             shuffled_df = temp_data_df.sample(frac=1, random_state=seed)
             train_end = int(len(shuffled_df)*data_split_ratio[0])
             test_end = train_end+int(len(shuffled_df)*data_split_ratio[1])
