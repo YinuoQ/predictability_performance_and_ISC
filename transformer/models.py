@@ -90,8 +90,7 @@ class ActionPredictionModel(pl.LightningModule):
 
         
     def test_step(self, batch, batch_idx):
-        torch.set_grad_enabled(True)
-    
+        torch.set_grad_enabled(False)
         src1, src2, src3, src4, src5, tgt, trg_y = batch   
         pred_output = self.model(src1, src2, src3, src4, src5, tgt)
         test_acc = self.correlation_arruracy(pred_output, trg_y)
@@ -100,18 +99,20 @@ class ActionPredictionModel(pl.LightningModule):
         self.log('test_loss', test_loss)
         self.log('test_acc', test_acc)
         return test_loss
-
-    def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=self.hparams.lr)
-        scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=self.hparams.lr_schedule, gamma=self.hparams.gamma)
-        return [optimizer], [scheduler]
     
     def predict_step(self, batch, batch_idx: int , dataloader_idx: int = None):
+        torch.set_grad_enabled(False)
         src1, src2, src3, src4, src5, tgt, trg_y = batch   
         pred_output = self.model(src1, src2, src3, src4, src5, tgt)     
 
         return pred_output
     
+    def configure_optimizers(self):
+        optimizer = torch.optim.Adam(self.parameters(), lr=self.hparams.lr)
+        scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=self.hparams.lr_schedule, gamma=self.hparams.gamma)
+        return [optimizer], [scheduler]
+    
+
     def setup(self, stage=None):
         if stage == 'fit':
             self.train_dataset = PredictAction(flag='train',

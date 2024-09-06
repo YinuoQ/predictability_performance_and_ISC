@@ -93,7 +93,7 @@ def main():
                       logger=False,
                       accelerator='gpu', 
                       devices=1)
-    trainer.test(model)
+    a = trainer.test(model)
  
     test_loader = model.test_dataloader()
     predictions = trainer.predict(model, test_loader)

@@ -2,7 +2,7 @@ data_filepath: data
 epochs: 100
 gamma: 0.8
 if_cuda: True
-log_dir: log/log_yaw
+log_dir: log
 lr: 0.00005
 lr_schedule:
 - 50

@@ -64,7 +64,6 @@ class CrossModalTransformer(nn.Module):
 
         # normalization
         self.norm = nn.LayerNorm(self.conv_output_dim)
-        self.norm2 = nn.LayerNorm(3840)
        
         # Cross-modal attention layers (self-attention for query/value and cross-attention for key)
         self.ca_eeg_2_pp = nn.MultiheadAttention(self.conv_output_dim, self.num_heads, batch_first=True, dropout=0.2)
@@ -95,7 +94,6 @@ class CrossModalTransformer(nn.Module):
         
         # Final layers
         self.fc1 = nn.Linear(in_features=960, out_features=90)
-        # self.fc2 = nn.Linear(in_features=256, out_features=3*time_steps)
         self.num_classes = num_classes
         self.time_steps = time_steps
         decoder_layer = nn.TransformerDecoderLayer(d_model=self.conv_output_dim*4, nhead=self.num_heads, batch_first=True)
