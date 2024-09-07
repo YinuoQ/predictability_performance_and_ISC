@@ -33,15 +33,20 @@ class ActionPredictionModel(pl.LightningModule):
         super().__init__()
         self.save_hyperparameters()
         self.kwargs = {'num_workers': self.hparams.num_workers, 'pin_memory': True} if self.hparams.if_cuda else {}
+        self.role = role
+        
         self.__build_model()
 
     def __build_model(self):
         # model
         self.model = CrossModalTransformer()
         # loss
-        # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        # class_weights = torch.tensor([2.9, 0.3, 1.7]).to(device)
-        self.loss_func = nn.CrossEntropyLoss(reduction='none')#, weight=class_weights)
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        if self.role != 'thrust':
+            class_weights = torch.tensor([20.0, 1.0, 20.0]).to(device)
+        else:
+            class_weights = torch.tensor([10.0, 1.0, 5.0]).to(device)
+        self.loss_func = nn.CrossEntropyLoss(reduction='none', weight=class_weights)
         # self.loss_func = nn.L1Loss()
 
         # accuracy
@@ -108,7 +113,7 @@ class ActionPredictionModel(pl.LightningModule):
         return pred_output
     
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=self.hparams.lr)
+        optimizer = torch.optim.AdamW(self.parameters(), lr=self.hparams.lr)
         scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=self.hparams.lr_schedule, gamma=self.hparams.gamma)
         return [optimizer], [scheduler]
     

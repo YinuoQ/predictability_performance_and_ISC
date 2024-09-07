@@ -86,7 +86,7 @@ class PredictAction(Dataset):
         # if self.flag != 'test':
         tgt = torch.cat((last_element, output_seq[:-1]), dim=0)
         # else:
-        #     tgt = torch.cat((last_element, torch.empty(29)), dim=0)
+        #     tgt = torch.cat((last_element, torch.zeros(29)), dim=0)
 
         trg_y = output_seq
         # We only want trg_y to consist of the target variable not any potential exogenous variables

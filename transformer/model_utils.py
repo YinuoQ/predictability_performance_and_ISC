@@ -11,11 +11,14 @@ class AdaptiveConvLayer(nn.Module):
         super(AdaptiveConvLayer, self).__init__()
         self.conv = nn.Conv1d(in_chenn_len, out_chann, kernel_size=1, stride=1, padding=2)
         self.conv_loc = nn.Conv1d(in_chenn_len, out_chann, kernel_size=2, stride=1, padding=2)
+        self.conv_tgt = nn.Conv1d(in_chenn_len, out_chann, kernel_size=1, stride=1, padding=1)
     
     def forward(self, x):
         # Flatten the time dimension if necessary
         if x.shape[2] == 60:
             x = self.conv(x)
+        elif x.shape[2] == 30:
+            x = self.conv_tgt(x)
         else:
             x = self.conv_loc(x)
         return x.permute(0,2,1)
@@ -47,69 +50,47 @@ class PositionalEncoding(nn.Module):
 class CrossModalTransformer(nn.Module):
     def __init__(self, num_classes=3, time_steps=30):
         super(CrossModalTransformer, self).__init__()
-        self.num_heads = 4
+        self.num_heads = 8
         self.conv_output_dim = 8
+        self.num_classes = num_classes
+        self.time_steps = time_steps
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
         # Adaptive convolutional layers for each modality
         self.eeg_conv = AdaptiveConv2dLayer(self.conv_output_dim)
-        self.pupil_conv = AdaptiveConvLayer(2, self.conv_output_dim)
-        self.speech_conv = AdaptiveConvLayer(2, self.conv_output_dim)
-        self.action_conv = AdaptiveConvLayer(2, self.conv_output_dim)
+        self.pupil_speech_action_conv = AdaptiveConvLayer(2, self.conv_output_dim)
         self.location_conv = AdaptiveConvLayer(3, self.conv_output_dim)
         self.tgt_conv = AdaptiveConvLayer(1, self.conv_output_dim)
 
         # Positional encoding
         self.pos_encoder = PositionalEncoding(self.conv_output_dim)
-        self.tgt_encoder = PositionalEncoding(self.conv_output_dim*4)
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.tgt_pos_encoder = PositionalEncoding(self.conv_output_dim)
 
         # normalization
         self.norm = nn.LayerNorm(self.conv_output_dim)
+        self.tgt_norm = nn.LayerNorm(self.conv_output_dim*4)
        
         # Cross-modal attention layers (self-attention for query/value and cross-attention for key)
-        self.ca_eeg_2_pp = nn.MultiheadAttention(self.conv_output_dim, self.num_heads, batch_first=True, dropout=0.2)
-        self.ca_eeg_2_sp = nn.MultiheadAttention(self.conv_output_dim, self.num_heads, batch_first=True, dropout=0.2)
-        self.ca_eeg_2_ac = nn.MultiheadAttention(self.conv_output_dim, self.num_heads, batch_first=True, dropout=0.2)
-        self.ca_eeg_2_lo = nn.MultiheadAttention(self.conv_output_dim, self.num_heads, batch_first=True, dropout=0.2)
+        self.cross_attention = nn.MultiheadAttention(self.conv_output_dim, self.num_heads, batch_first=True, dropout=0.4)
+        self.self_attention = nn.MultiheadAttention(self.conv_output_dim, self.num_heads, batch_first=True, dropout=0.2)
+        self.tgt_attention = nn.MultiheadAttention(self.conv_output_dim, self.num_heads, batch_first=True, dropout=0.2)
+        self.output_attention = nn.MultiheadAttention(self.conv_output_dim, self.num_heads, batch_first=True, dropout=0.2)
 
-        self.ca_pp_2_eeg = nn.MultiheadAttention(self.conv_output_dim, self.num_heads, batch_first=True, dropout=0.2)
-        self.ca_pp_2_sp = nn.MultiheadAttention(self.conv_output_dim, self.num_heads, batch_first=True, dropout=0.2)
-        self.ca_pp_2_ac = nn.MultiheadAttention(self.conv_output_dim, self.num_heads, batch_first=True, dropout=0.2)
-        self.ca_pp_2_lo = nn.MultiheadAttention(self.conv_output_dim, self.num_heads, batch_first=True, dropout=0.2)
- 
-        self.ca_sp_2_eeg = nn.MultiheadAttention(self.conv_output_dim, self.num_heads, batch_first=True, dropout=0.2)
-        self.ca_sp_2_pp = nn.MultiheadAttention(self.conv_output_dim, self.num_heads, batch_first=True, dropout=0.2)
-        self.ca_sp_2_ac = nn.MultiheadAttention(self.conv_output_dim, self.num_heads, batch_first=True, dropout=0.2)
-        self.ca_sp_2_lo = nn.MultiheadAttention(self.conv_output_dim, self.num_heads, batch_first=True, dropout=0.2)
-        
-        self.ca_ac_2_eeg = nn.MultiheadAttention(self.conv_output_dim, self.num_heads, batch_first=True, dropout=0.2)
-        self.ca_ac_2_pp = nn.MultiheadAttention(self.conv_output_dim, self.num_heads, batch_first=True, dropout=0.2)
-        self.ca_ac_2_sp = nn.MultiheadAttention(self.conv_output_dim, self.num_heads, batch_first=True, dropout=0.2)
-        self.ca_ac_2_lo = nn.MultiheadAttention(self.conv_output_dim, self.num_heads, batch_first=True, dropout=0.2)
-                               
-        # Self-attention layers for each modality
-        self.sa_eeg = nn.MultiheadAttention(int(self.conv_output_dim), self.num_heads, batch_first=True, dropout=0.2)
-        self.sa_pp = nn.MultiheadAttention(int(self.conv_output_dim), self.num_heads, batch_first=True, dropout=0.2)
-        self.sa_sp = nn.MultiheadAttention(int(self.conv_output_dim), self.num_heads, batch_first=True, dropout=0.2)
-        self.sa_ac = nn.MultiheadAttention(int(self.conv_output_dim), self.num_heads, batch_first=True, dropout=0.2)
-        
+
         # Final layers
-        self.fc1 = nn.Linear(in_features=960, out_features=90)
-        self.num_classes = num_classes
-        self.time_steps = time_steps
-        decoder_layer = nn.TransformerDecoderLayer(d_model=self.conv_output_dim*4, nhead=self.num_heads, batch_first=True)
-        self.decoder = nn.TransformerDecoder(decoder_layer, num_layers=1)
+        self.fc1 = nn.Linear(in_features=256, out_features=90)
 
-    def generate_square_subsequent_mask(self, sz):
-        mask = (torch.triu(torch.ones(sz, sz)) == 1).transpose(0, 1)
+    def generate_subsequent_mask(self, sz1, sz2):
+        mask = (torch.triu(torch.ones(sz2, sz1)) == 1).transpose(0, 1)
         mask = mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0))
         return mask
+    
     def forward(self, eeg, pupil, speech, action, location, tgt):
         # Apply adaptive convolution
-
         eeg = self.eeg_conv(eeg)
-        pupil = self.pupil_conv(pupil)
-        speech = self.speech_conv(speech)
-        action = self.action_conv(action)
+        pupil = self.pupil_speech_action_conv(pupil)
+        speech = self.pupil_speech_action_conv(speech)
+        action = self.pupil_speech_action_conv(action)
         location = self.location_conv(location)
 
         # Apply positional encoding
@@ -120,83 +101,84 @@ class CrossModalTransformer(nn.Module):
         location = self.pos_encoder(location)
 
         # normalizing 
-        eeg = self.norm(eeg)
-        pupil = self.norm(pupil)
-        speech = self.norm(speech)
-        action = self.norm(action)
-        location = self.norm(location)
+        # eeg = self.norm(eeg)
+        # pupil = self.norm(pupil)
+        # speech = self.norm(speech)
+        # action = self.norm(action)
+        # location = self.norm(location)
         
-        key_padding_mask = self.generate_square_subsequent_mask(64).to(self.device)
         # Cross-modality attention
-        eeg_cross_pupil, _ = self.ca_eeg_2_pp(eeg, pupil, pupil, attn_mask=key_padding_mask)
-        # eeg_cross_pupil = self.norm(eeg_cross_pupil)
-        eeg_cross_speech, _ = self.ca_eeg_2_sp(eeg, speech, speech, attn_mask=key_padding_mask)
-        # eeg_cross_speech = self.norm(eeg_cross_speech)
-        eeg_cross_action, _ = self.ca_eeg_2_ac(eeg, action, action, attn_mask=key_padding_mask)
-        # eeg_cross_action = self.norm(eeg_cross_action)
-        eeg_cross_location, _ = self.ca_eeg_2_lo(eeg, location, location, attn_mask=key_padding_mask)
-        # eeg_cross_location = self.norm(eeg_cross_location)
-        
-        pupil_cross_eeg, _ = self.ca_pp_2_eeg(pupil, eeg, eeg, attn_mask=key_padding_mask)
-        # pupil_cross_eeg = self.norm(pupil_cross_eeg)
-        pupil_cross_speech, _ = self.ca_pp_2_sp(pupil, speech, speech, attn_mask=key_padding_mask)
-        # pupil_cross_speech = self.norm(pupil_cross_speech)
-        pupil_cross_action, _ = self.ca_pp_2_ac(pupil, action, action, attn_mask=key_padding_mask)
-        # pupil_cross_action = self.norm(pupil_cross_action)
-        pupil_cross_location, _ = self.ca_pp_2_lo(pupil, location, location, attn_mask=key_padding_mask)
-        # pupil_cross_location = self.norm(pupil_cross_location)
+        eeg_cross_pupil = self.cross_attention(eeg, pupil, pupil, need_weights=False)[0]
+        eeg_cross_speech = self.cross_attention(eeg, speech, speech, need_weights=False)[0]
+        eeg_cross_action = self.cross_attention(eeg, action, action, need_weights=False)[0]
+        eeg_cross_location = self.cross_attention(eeg, location, location, need_weights=False)[0]
+        eeg_self = self.self_attention(eeg, eeg, eeg, need_weights=False)[0]
+        eeg_cross_pupil = self.norm(eeg_cross_pupil)
+        eeg_cross_speech = self.norm(eeg_cross_speech)
+        eeg_cross_action = self.norm(eeg_cross_action)
+        eeg_cross_location = self.norm(eeg_cross_location)
+        eeg_self = self.norm(eeg_self)
 
+        pupil_cross_eeg = self.cross_attention(pupil, eeg, eeg, need_weights=False)[0]
+        pupil_cross_speech = self.cross_attention(pupil, speech, speech, need_weights=False)[0]
+        pupil_cross_action = self.cross_attention(pupil, action, action, need_weights=False)[0]
+        pupil_cross_location = self.cross_attention(pupil, location, location, need_weights=False)[0]
+        pupil_self = self.self_attention(pupil, pupil, pupil, need_weights=False)[0]
         
-        speech_cross_eeg, _ = self.ca_sp_2_eeg(speech, eeg, eeg, attn_mask=key_padding_mask)
-        # speech_cross_eeg = self.norm(speech_cross_eeg)
-        speech_cross_pupil, _ = self.ca_sp_2_pp(speech, pupil, pupil, attn_mask=key_padding_mask)
-        # speech_cross_pupil = self.norm(speech_cross_pupil)
-        speech_cross_action, _ = self.ca_sp_2_ac(speech, action, action, attn_mask=key_padding_mask)
-        # speech_cross_action = self.norm(speech_cross_action)
-        speech_cross_location, _ = self.ca_sp_2_lo(speech, location, location, attn_mask=key_padding_mask)
-        # speech_cross_location = self.norm(speech_cross_location)
+        pupil_cross_eeg = self.norm(pupil_cross_eeg)
+        pupil_cross_speech = self.norm(pupil_cross_speech)
+        pupil_cross_action = self.norm(pupil_cross_action)
+        pupil_cross_location = self.norm(pupil_cross_location)
+        pupil_self = self.norm(pupil_self)
 
-        
-        action_cross_eeg, _ = self.ca_ac_2_eeg(action, eeg, eeg, attn_mask=key_padding_mask)
-        # action_cross_eeg = self.norm(action_cross_eeg)
-        action_cross_pupil, _ = self.ca_ac_2_pp(action, pupil, pupil, attn_mask=key_padding_mask)
-        # action_cross_pupil = self.norm(action_cross_pupil)
-        action_cross_speech, _ = self.ca_ac_2_sp(action, speech, speech, attn_mask=key_padding_mask)
-        # action_cross_speech = self.norm(action_cross_speech)
-        action_cross_location, _ = self.ca_ac_2_lo(action, location, location, attn_mask=key_padding_mask)
-        # action_cross_location = self.norm(action_cross_location)
+        speech_cross_eeg = self.cross_attention(speech, eeg, eeg, need_weights=False)[0]
+        speech_cross_pupil = self.cross_attention(speech, pupil, pupil, need_weights=False)[0]
+        speech_cross_action = self.cross_attention(speech, action, action, need_weights=False)[0]
+        speech_cross_location = self.cross_attention(speech, location, location, need_weights=False)[0]
+        speech_self = self.self_attention(speech, speech, speech, need_weights=False)[0]
+
+        speech_cross_eeg = self.norm(speech_cross_eeg)
+        speech_cross_pupil = self.norm(speech_cross_pupil)
+        speech_cross_action = self.norm(speech_cross_action)
+        speech_cross_location = self.norm(speech_cross_location)
+        speech_self = self.norm(speech_self)
+
+
+        action_cross_eeg = self.cross_attention(action, eeg, eeg, need_weights=False)[0]
+        action_cross_pupil = self.cross_attention(action, pupil, pupil, need_weights=False)[0]
+        action_cross_speech = self.cross_attention(action, speech, speech, need_weights=False)[0]
+        action_cross_location = self.cross_attention(action, location, location, need_weights=False)[0]
+        action_self = self.self_attention(action, action, action, need_weights=False)[0]
+       
+        action_cross_eeg = self.norm(action_cross_eeg)
+        action_cross_pupil = self.norm(action_cross_pupil)
+        action_cross_speech = self.norm(action_cross_speech)
+        action_cross_location = self.norm(speech_cross_location)
+        action_self = self.norm(action_self)
 
         # Sum the outputs of cross-attention for each modality
-        eeg_final = eeg_cross_pupil + eeg_cross_speech + eeg_cross_action + eeg_cross_location
-        pupil_final = pupil_cross_eeg + pupil_cross_speech + pupil_cross_action + pupil_cross_location
+        eeg_final = eeg_cross_pupil + eeg_cross_action + eeg_cross_location + eeg_self + eeg_cross_speech
+        pupil_final = pupil_cross_eeg + pupil_cross_action + pupil_cross_location + pupil_self + pupil_cross_speech
         speech_final = speech_cross_eeg + speech_cross_pupil + speech_cross_action + speech_cross_location
-        action_final = action_cross_eeg + action_cross_pupil + action_cross_speech + action_cross_location
-        # eeg_final = torch.cat([eeg_cross_pupil, eeg_cross_speech, eeg_cross_action, eeg_cross_location], axis=2)
-        # pupil_final = torch.cat([pupil_cross_eeg , pupil_cross_speech , pupil_cross_action , pupil_cross_location], axis=2)
-        # speech_final = torch.cat([speech_cross_eeg , speech_cross_pupil , speech_cross_action, speech_cross_location], axis=2)
-        # action_final = torch.cat([action_cross_eeg , action_cross_pupil , action_cross_speech , action_cross_location], axis=2)
-            
-        # Self-attention within each modality
-        eeg_self, _ = self.sa_eeg(eeg_final, eeg_final, eeg_final)
-        # eeg_self = self.norm(eeg_self)
-        pupil_self, _ = self.sa_pp(pupil_final, pupil_final, pupil_final)
-        # pupil_self = self.norm(pupil_self)
-        speech_self, _ = self.sa_sp(speech_final, speech_final, speech_final)
-        # speech_self = self.norm(speech_self)
-        action_self, _ = self.sa_ac(action_final, action_final, action_final)
-        # action_self = self.norm(action_self)
+        action_final = action_cross_eeg + action_cross_pupil + action_cross_location + action_self + action_cross_speech
         
         # Concatenate modalities
-        concatenated = torch.cat([eeg_self, pupil_self, speech_self, action_self], dim=-1)
+        concatenated = torch.cat([eeg_final, pupil_final, action_final, speech_final], dim=-2)#, speech_self
+        # import IPython
+        # IPython.embed()
+        # assert False
         
         # should remove tgt encoder here
-        tgt = self.tgt_encoder(tgt[:,:,None])  # Apply positional encoding to the target
-        tgt_mask = self.generate_square_subsequent_mask(tgt.size(1)).to(self.device)
-        output = self.decoder(tgt, concatenated, tgt_mask=tgt_mask)
+        tgt = self.tgt_conv(tgt.unsqueeze(1))
+        tgt = self.tgt_pos_encoder(tgt)  # Apply positional encoding to the target
+        tgt_mask = self.generate_subsequent_mask(tgt.size(0), tgt.size(1)).to(self.device)
+        # tgt = self.tgt_attention(tgt, tgt, tgt, key_padding_mask=tgt_mask)[0]
+        output = self.output_attention(tgt, concatenated, concatenated)[0]
+        # output = self.tgt_norm(output)
+
 
         # Final output layer
-        output = self.fc1(output.view(eeg.shape[0], -1))
-        # output = self.fc2(output)
-        output = output.view(eeg.shape[0], 3, 30)
- 
+        output = self.fc1(torch.reshape(output, (-1, output.shape[1] * output.shape[2])))
+        output = torch.transpose(output.view(-1, 30, 3), 1,2)
+        output = torch.softmax(output, dim=1)
         return output
