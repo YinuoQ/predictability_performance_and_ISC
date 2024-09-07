@@ -97,6 +97,3 @@ if __name__ == '__main__':
     pred_perf_df = get_predictability_and_performance(performance_df, predictability_df)
     mixed_effects_model(pred_perf_df)
    
-
-
-
