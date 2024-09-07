@@ -34,7 +34,7 @@ def get_predictability():
     target_prediction_df = pd.DataFrame()
 
     for i, role in enumerate(['yaw', 'pitch', 'thrust']):
-        target_prediction_arr = np.load(f'../../transformer/log_data_seed_1234/lightning_logs/version_{i}/pred_target.npy')
+        target_prediction_arr = np.load(f'../../transformer/log_data_seed_1234/lightning_logs/version_{i+3}/pred_target.npy')
         target_info = np.load(f'../../transformer/data/test/{role}/data_info.npy',  allow_pickle=True)
         target_info_df = pd.concat(target_info)
         target_info_df['role'] = role
@@ -60,8 +60,8 @@ def mixed_effects_model(predictability_performance_df):
     IPython.embed()
     assert False
     model_formula = "performance ~ predictability"
-    predictability_performance_df['sessions'] = predictability_performance_df['sessionID'].apply(lambda x: int(x[1:]))
-    model = smf.mixedlm(model_formula, predictability_performance_df, groups=predictability_performance_df['teamID'], re_formula='1+sessions')
+    # predictability_performance_df['sessions'] = predictability_performance_df['sessionID'].apply(lambda x: int(x[1:]))
+    model = smf.mixedlm(model_formula, predictability_performance_df, groups=predictability_performance_df['teamID'], re_formula='1+sessionID')
     # Fit the model
     model_result = model.fit()
     print(model_result.summary())
