@@ -15,26 +15,43 @@ def get_performance(lcoation_df):
     performance_df = get_performance_from_location(lcoation_df)
     return performance_df
 
+def normalized_cross_correlation(a, b):
+    # Ensure the two series are numpy arrays
+    a = np.array(a)
+    b = np.array(b)
+    
+    # Mean of the series
+    mean_a = np.mean(a)
+    mean_b = np.mean(b)
+    
+    # Subtract the mean from each series
+    a_diff = a - mean_a
+    b_diff = b - mean_b
+    
+    # Calculate the numerator as the sum of the element-wise product of the two series
+    numerator = np.sum(a_diff * b_diff)
+    
+    # Calculate the denominator as the product of the square roots of the sum of squares
+    denominator = np.sqrt(np.sum(a_diff ** 2)) * np.sqrt(np.sum(b_diff ** 2))
+    
+    # Return the normalized cross-correlation
+    return numerator / denominator if denominator != 0 else 0
+
 def compute_predictability(target_prediction_df):
     predictability_lst = []
     for i in range(3):
         temp_target = target_prediction_df.iloc[i].target
         temp_pred = target_prediction_df.iloc[i].prediction
-        if np.sum(temp_target == temp_pred) == 30:
-            predictability_lst.append(1)
-        elif np.sum(temp_pred == temp_pred[0]) == 30:
-            predictability_lst.append(0)
-        elif np.sum(temp_target == temp_target[0]) == 30:
-            predictability_lst.append(0)
-        else:
-            predictability_lst.append(np.corrcoef(temp_target, temp_pred)[0,1])
-    return np.mean(predictability_lst)
+        # predictability_lst.append(np.corrcoef(temp_target, temp_pred)[0,1])
+        # predictability_lst.append(np.sum((temp_pred - temp_target)**2)/len(temp_pred))
+        predictability_lst.append(normalized_cross_correlation(temp_target, temp_pred))
+    return np.mean(predictability_lst)#np.tanh(np.nanmean(np.arctanh(predictability_lst)))
 
 def get_predictability():
     target_prediction_df = pd.DataFrame()
 
     for i, role in enumerate(['yaw', 'pitch', 'thrust']):
-        target_prediction_arr = np.load(f'../../transformer/log_data_seed_1234/lightning_logs/version_{i+3}/pred_target.npy')
+        target_prediction_arr = np.load(f'../../transformer/log_data_seed_1234/lightning_logs/version_{i}/pred_target.npy')
         target_info = np.load(f'../../transformer/data/test/{role}/data_info.npy',  allow_pickle=True)
         target_info_df = pd.concat(target_info)
         target_info_df['role'] = role
@@ -56,16 +73,16 @@ def get_predictability():
 
     return predictabiltiy_df
 def mixed_effects_model(predictability_performance_df):
-    import IPython
-    IPython.embed()
-    assert False
+
     model_formula = "performance ~ predictability"
-    # predictability_performance_df['sessions'] = predictability_performance_df['sessionID'].apply(lambda x: int(x[1:]))
-    model = smf.mixedlm(model_formula, predictability_performance_df, groups=predictability_performance_df['teamID'], re_formula='1+sessionID')
+    valid_df = predictability_performance_df.dropna().reset_index(drop=True)
+    model = smf.mixedlm(model_formula, valid_df, groups=valid_df['teamID'])#, re_formula='sessionID')
     # Fit the model
     model_result = model.fit()
     print(model_result.summary())
-
+    import IPython
+    IPython.embed()
+    assert False
 def get_predictability_and_performance(performance_df, predictability_df):
 
     predictability_df['performance'] = None
