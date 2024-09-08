@@ -1,5 +1,5 @@
 data_filepath: data
-epochs: 200
+epochs: 500
 gamma: 0.8
 if_cuda: True
 log_dir: log
