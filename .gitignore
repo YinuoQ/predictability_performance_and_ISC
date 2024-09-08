@@ -45,7 +45,7 @@ pip-lock.txt
 # Ignore macOS file metadata
 # Comment the next line if you use macOS and want to keep file metadata
 *._DS_Store
-
+*.key
 log_**
 
 data
