@@ -45,13 +45,13 @@ def compute_predictability(target_prediction_df):
         # predictability_lst.append(np.corrcoef(temp_target, temp_pred)[0,1])
         # predictability_lst.append(np.sum((temp_pred - temp_target)**2)/len(temp_pred))
         predictability_lst.append(normalized_cross_correlation(temp_target, temp_pred))
-    return np.mean(predictability_lst)#np.tanh(np.nanmean(np.arctanh(predictability_lst)))
+    return np.tanh(np.nanmean(np.arctanh(predictability_lst)))
 
 def get_predictability():
     target_prediction_df = pd.DataFrame()
 
     for i, role in enumerate(['yaw', 'pitch', 'thrust']):
-        target_prediction_arr = np.load(f'../../transformer/log_data_seed_1234/lightning_logs/version_{i}/pred_target.npy')
+        target_prediction_arr = np.load(f'../../transformer/log_data_seed_1234/lightning_logs/version_{i+3}/pred_target.npy')
         target_info = np.load(f'../../transformer/data/test/{role}/data_info.npy',  allow_pickle=True)
         target_info_df = pd.concat(target_info)
         target_info_df['role'] = role
@@ -76,7 +76,7 @@ def mixed_effects_model(predictability_performance_df):
 
     model_formula = "performance ~ predictability"
     valid_df = predictability_performance_df.dropna().reset_index(drop=True)
-    model = smf.mixedlm(model_formula, valid_df, groups=valid_df['teamID'])#, re_formula='sessionID')
+    model = smf.mixedlm(model_formula, valid_df, groups=valid_df['teamID'], re_formula='sessionID')
     # Fit the model
     model_result = model.fit()
     print(model_result.summary())
