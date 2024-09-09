@@ -42,19 +42,19 @@ def compute_predictability(target_prediction_df):
     # import IPython
     # IPython.embed()
     # assert False  
-    a = np.array(list(target_prediction_df.target)).flatten()
-    b = np.array(list(target_prediction_df.prediction)).flatten()
-    if np.sum(a==b) == 90:
-        return 1
-    else:
-        temp_corr_mat = np.corrcoef(a, b)
-        return temp_corr_mat[0,1]
-    # for i in range(3):
-    #     temp_target = target_prediction_df.iloc[i].target
-    #     temp_pred = target_prediction_df.iloc[i].prediction
-    #     # predictability_lst.append(np.sum((temp_pred - temp_target)**2)/len(temp_pred))
-    #     predictability_lst.append(np.corrcoef(temp_target, temp_pred)[0,1])
-    # return np.tanh(np.nanmean(np.arctanh(predictability_lst))) #np.nanmean(predictability_lst)#
+    # a = np.array(list(target_prediction_df.target)).flatten()
+    # b = np.array(list(target_prediction_df.prediction)).flatten()
+    # if np.sum(a==b) == 90:
+    #     return 1
+    # else:
+    #     temp_corr_mat = np.corrcoef(a, b)
+    #     return temp_corr_mat[0,1]
+    for i in range(3):
+        temp_target = target_prediction_df.iloc[i].target
+        temp_pred = target_prediction_df.iloc[i].prediction
+        # predictability_lst.append(np.sum((temp_pred - temp_target)**2)/len(temp_pred))
+        predictability_lst.append(np.corrcoef(temp_target, temp_pred)[0,1])
+    return np.nanmean(predictability_lst)#np.tanh(np.nanmean(np.arctanh(predictability_lst))) 
 
 def get_predictability():
     target_prediction_df = pd.DataFrame()
