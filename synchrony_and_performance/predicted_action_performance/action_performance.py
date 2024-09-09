@@ -60,7 +60,7 @@ def get_predictability():
     target_prediction_df = pd.DataFrame()
 
     for i, role in enumerate(['yaw', 'pitch', 'thrust']):
-        target_prediction_arr = np.load(f'../../transformer/log_data_seed_1234/lightning_logs/version_{i+6}/pred_target.npy')
+        target_prediction_arr = np.load(f'../../transformer/log_data_seed_1234/lightning_logs/version_{i+9}/pred_target.npy')
         target_info = np.load(f'../../transformer/data/test/{role}/data_info.npy',  allow_pickle=True)
         target_info_df = pd.concat(target_info)
         target_info_df['role'] = role
@@ -109,9 +109,9 @@ def get_predictability_and_performance(performance_df, predictability_df):
     return predictability_df
 
 def get_trial_performance(lcoation_df, predictability_df):
-    import IPython
-    IPython.embed()
-    assert False
+    # import IPython
+    # IPython.embed()
+    # assert False
     performance_df = copy.deepcopy(lcoation_df)
     performance_df = performance_df[['teamID', 'sessionID', 'trialID']].drop_duplicates().reset_index(drop=True)
     performance_df['performance'] = lcoation_df.groupby(['teamID', 'sessionID', 'trialID']).apply(lambda x: x.ringID.max()+1).values
