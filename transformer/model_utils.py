@@ -176,7 +176,6 @@ class CrossModalTransformer(nn.Module):
         output = self.output_attention(tgt, concatenated, concatenated)[0]
         # output = self.tgt_norm(output)
 
-
         # Final output layer
         output = self.fc1(torch.reshape(output, (-1, output.shape[1] * output.shape[2])))
         output = torch.transpose(output.view(-1, 30, 3), 1,2)

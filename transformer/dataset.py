@@ -3,8 +3,6 @@ import torch
 import numpy as np
 from torch.utils.data import Dataset
 
-
-
 class PredictAction(Dataset):
     def __init__(self, flag, seed, dataset_folder, role):
         super().__init__()
@@ -91,12 +89,3 @@ class PredictAction(Dataset):
         trg_y = output_seq
         # We only want trg_y to consist of the target variable not any potential exogenous variables
         return src1, src2, src3, src4, src5, tgt, trg_y
-
-
-
-
-
-
-
-
-    

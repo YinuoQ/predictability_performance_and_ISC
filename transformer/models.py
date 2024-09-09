@@ -59,12 +59,7 @@ class ActionPredictionModel(pl.LightningModule):
         targ = target+1
         pearson_r_lst = []
         for i in range(len(pred)):
-            if (pred[i] == targ[i]).sum() == 30:
-                pearson_r_lst.append(torch.Tensor([1]))
-            elif (pred[i] == pred[i,0]).sum() == 30 or (targ[i] == targ[i,0]).sum() == 30:
-                pearson_r_lst.append(torch.Tensor([0]))
-            else:
-                pearson_r_lst.append(torch.abs(torch.corrcoef(torch.stack((pred[i], targ[i])))[0,1]))
+            pearson_r_lst.append(torch.abs(torch.corrcoef(torch.stack((pred[i], targ[i])))[0,1]))
         output = torch.nanmean(torch.FloatTensor(pearson_r_lst)) 
         # output = self.accuracy_func(prediction, target)
  
