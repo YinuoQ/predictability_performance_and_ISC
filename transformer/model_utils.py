@@ -172,7 +172,7 @@ class CrossModalTransformer(nn.Module):
         tgt = self.tgt_conv(tgt.unsqueeze(1))
         tgt = self.tgt_pos_encoder(tgt)  # Apply positional encoding to the target
         tgt_mask = self.generate_subsequent_mask(tgt.size(0), tgt.size(1)).to(self.device)
-        # tgt = self.tgt_attention(tgt, tgt, tgt, key_padding_mask=tgt_mask)[0]
+        tgt = self.tgt_attention(tgt, tgt, tgt, key_padding_mask=tgt_mask)[0]
         output = self.output_attention(tgt, concatenated, concatenated)[0]
         # output = self.tgt_norm(output)
 
