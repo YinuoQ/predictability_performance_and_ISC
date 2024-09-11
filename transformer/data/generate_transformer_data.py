@@ -121,12 +121,11 @@ def reformat_input_output_data(input_output_lst):
     
     return eeg_pp_action_speech_loc, np.vstack(input_output_arr[9::10])
 
-def generate_training_testing_val_dataset(data_df, seed=1, data_split_ratio=(0.25, 0.7, 0.05)):
+def generate_training_testing_val_dataset(data_df, seed=1, data_split_ratio=(0.15, 0.8, 0.05)):
     # import IPython
     # IPython.embed()
     # assert False    
     unique_team = data_df[['teamID', 'sessionID']].drop_duplicates().reset_index(drop=True)
-
     role_lst = ['yaw', 'pitch', 'thrust']
 
     for role in role_lst:

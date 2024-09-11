@@ -17,17 +17,21 @@ def get_performance(lcoation_df):
 
 def compute_predictability(target_prediction_df):
     predictability_lst = []
-    for i in range(3):
-        temp_target = target_prediction_df.iloc[i].target
-        temp_pred = target_prediction_df.iloc[i].prediction
-        predictability_lst.append(np.corrcoef(temp_target, temp_pred)[0,1])        
-    return np.nanmean(np.array(predictability_lst))
+    target = np.array(list(target_prediction_df.target)).flatten()
+    prediction = np.array(list(target_prediction_df.prediction)).flatten()
+    # return 1 - np.sum((target - prediction)**2) / 90 / 4
+    return np.sum(target == prediction) / 90
+    # for i in range(3):
+    #     temp_target = target_prediction_df.iloc[i].target
+    #     temp_pred = target_prediction_df.iloc[i].prediction
+    #     predictability_lst.append(np.corrcoef(temp_target, temp_pred)[0,1])        
+    # return np.nanmean(np.array(predictability_lst))
 
 def get_predictability():
     target_prediction_df = pd.DataFrame()
 
     for i, role in enumerate(['yaw', 'pitch', 'thrust']):
-        target_prediction_arr = np.load(f'../../transformer/log_data_seed_1234/lightning_logs/version_{i+3}/pred_target.npy')
+        target_prediction_arr = np.load(f'../../transformer/log_data_seed_1234/lightning_logs/version_{i}/pred_target.npy')
         target_info = np.load(f'../../transformer/data/test/{role}/data_info.npy',  allow_pickle=True)
         target_info_df = pd.concat(target_info)
         target_info_df['role'] = role
@@ -53,7 +57,7 @@ def mixed_effects_model(predictability_performance_df):
     model_formula = "performance ~ predictability"
     predictability_performance_df['session'] = predictability_performance_df.sessionID.apply(lambda x: int(x[1:]))
     valid_df = predictability_performance_df
-    model = smf.mixedlm(model_formula, valid_df, groups=valid_df['teamID'], re_formula='session')
+    model = smf.mixedlm(model_formula, valid_df, groups=valid_df['teamID'], re_formula='sessionID')
     model_result = model.fit()
     print(model_result.summary())
 
@@ -76,9 +80,6 @@ def get_predictability_and_performance(performance_df, predictability_df):
     return predictability_df.dropna().reset_index(drop=True)
 
 def get_trial_performance(lcoation_df, predictability_df):
-    import IPython
-    IPython.embed()
-    assert False
     performance_df = copy.deepcopy(lcoation_df)
     performance_df = performance_df[['teamID', 'sessionID', 'trialID']].drop_duplicates().reset_index(drop=True)
     performance_df['performance'] = lcoation_df.groupby(['teamID', 'sessionID', 'trialID']).apply(lambda x: x.ringID.max()+1).values
@@ -92,13 +93,13 @@ def get_trial_performance(lcoation_df, predictability_df):
             predictability_epoch_lst = []
             for idx in data_ids:
                 predictability_epoch_lst.append(predictability_df.iloc[idx].predictability)
-            performance_df.at[i, 'predictability'] = np.nanmean(predictability_epoch_lst)#np.tanh(np.nanmean(np.arctanh(predictability_epoch_lst)))
+            performance_df.at[i, 'predictability'] = np.nanmean(predictability_epoch_lst)
     
     a = performance_df.dropna().reset_index(drop=True)
     a.predictability = pd.to_numeric(a.predictability)
     model_formula = "performance ~ predictability"
 
-    model = smf.mixedlm(model_formula, a, groups=a['teamID'])#, re_formula='sessionID')
+    model = smf.mixedlm(model_formula, a, groups=a['teamID'], re_formula='sessionID')
 
     model_result = model.fit()
     print(model_result.summary())
