@@ -57,13 +57,14 @@ class ActionPredictionModel(pl.LightningModule):
     def correlation_arruracy(self, prediction, target):
         pred = torch.argmax(prediction, dim=1).float()
         targ = target+1
-        pearson_r_lst = []
-        for i in range(len(pred)):
-            pearson_r_lst.append(torch.abs(torch.corrcoef(torch.stack((pred[i], targ[i])))[0,1]))
-        output = torch.nanmean(torch.FloatTensor(pearson_r_lst)) 
+        # pearson_r_lst = []
+        # for i in range(len(pred)):
+        #     pearson_r_lst.append(torch.abs(torch.corrcoef(torch.stack((pred[i], targ[i])))[0,1]))
+        # output = torch.nanmean(torch.FloatTensor(pearson_r_lst)) 
         # output = self.accuracy_func(prediction, target)
  
         # output = -torch.sum(torch.abs(prediction - target))
+        output = torch.sum(pred == targ) / (pred.shape[0] * pred.shape[1])
         return output
     
     def training_step(self, batch, batch_idx):
