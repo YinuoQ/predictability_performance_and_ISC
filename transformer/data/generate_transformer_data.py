@@ -127,7 +127,13 @@ def generate_training_testing_val_dataset(data_df, seed=1, data_split_ratio=(0.0
     # assert False    
     unique_team = data_df[['teamID', 'sessionID']].drop_duplicates().reset_index(drop=True)
     role_lst = ['yaw', 'pitch', 'thrust']
-
+    all_role_train_input = []
+    all_role_test_input = []
+    all_role_val_input = []    
+    all_role_train_output = []
+    all_role_test_output = []
+    all_role_val_output = []
+    all_team_sess_ring = []
     for role in role_lst:
         training_lst = []
         testing_lst = []
@@ -152,22 +158,26 @@ def generate_training_testing_val_dataset(data_df, seed=1, data_split_ratio=(0.0
         training_arr_input, training_arr_output = reformat_input_output_data(training_lst)
         testing_arr_input, testing_arr_output = reformat_input_output_data(testing_lst)
         validation_arr_input, validation_arr_output = reformat_input_output_data(validation_lst)
+        all_role_train_input.append(training_arr_input)
+        all_role_test_input.append(testing_arr_input)
+        all_role_val_input.append(validation_arr_input)   
+        all_role_train_output.append(training_arr_output)
+        all_role_test_output.append(testing_arr_output)
+        all_role_val_output.append(validation_arr_output)
+        all_team_sess_ring.append(test_team_sess_trial_ring_df)
 
-        # import IPython
-        # IPython.embed()
-        # assert False
-        mkdir(os.path.join('train', f'{role}'))
-        mkdir(os.path.join('test', f'{role}'))
-        mkdir(os.path.join('validation', f'{role}'))
-        for i, modality in enumerate(['EEG', 'Pupil', 'Action', 'Speech', 'location']):
-            np.save(os.path.join('train', f'{role}', f'train_{modality.lower()}.npy'), training_arr_input[i])
-            np.save(os.path.join('test', f'{role}', f'test_{modality.lower()}.npy'), testing_arr_input[i])
-            np.save(os.path.join('validation', f'{role}', f'validation_{modality.lower()}.npy'), validation_arr_input[i])
+    mkdir(os.path.join('train'))
+    mkdir(os.path.join('test'))
+    mkdir(os.path.join('validation'))
+    for i, modality in enumerate(['EEG', 'Pupil', 'Action', 'Speech', 'location']):
+        np.save(os.path.join('train', f'train_{modality.lower()}.npy'), np.concatenate([all_role_train_input[0][i], all_role_train_input[1][i], all_role_train_input[2][i]]))
+        np.save(os.path.join('test', f'test_{modality.lower()}.npy'), np.concatenate([all_role_test_input[0][i], all_role_test_input[1][i], all_role_test_input[2][i]]))
+        np.save(os.path.join('validation', f'validation_{modality.lower()}.npy'), np.concatenate([all_role_val_input[0][i], all_role_val_input[1][i], all_role_val_input[2][i]]))
 
-        np.save(os.path.join('train', f'{role}', f'train_output.npy'), training_arr_output)
-        np.save(os.path.join('test', f'{role}', f'test_output.npy'), testing_arr_output)
-        np.save(os.path.join('validation', f'{role}', f'validation_output.npy'), validation_arr_output)
-        np.save(os.path.join('test', f'{role}', f'data_info.npy'), np.array(test_team_sess_trial_ring_lst[:len(unique_team)], dtype=object))
+    np.save(os.path.join('train', 'train_output.npy'), np.concatenate([all_role_train_output[0][i], all_role_train_output[1][i], all_role_train_output[2][i]]))
+    np.save(os.path.join('test', 'test_output.npy'), np.concatenate([all_role_test_output[0][i], all_role_test_output[1][i], all_role_test_output[2][i]]))
+    np.save(os.path.join('validation', 'validation_output.npy'), np.concatenate([all_role_val_output[0][i], all_role_val_output[1][i], all_role_val_output[2][i]]))
+    np.save(os.path.join('test', 'data_info.npy'), pd.concat(all_team_sess_ring).reset_index(drop=True))
 
 if __name__ == '__main__':
     path = '../../data'
