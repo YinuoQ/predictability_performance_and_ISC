@@ -174,9 +174,9 @@ def generate_training_testing_val_dataset(data_df, seed=1, data_split_ratio=(0.0
         np.save(os.path.join('test', f'test_{modality.lower()}.npy'), np.concatenate([all_role_test_input[0][i], all_role_test_input[1][i], all_role_test_input[2][i]]))
         np.save(os.path.join('validation', f'validation_{modality.lower()}.npy'), np.concatenate([all_role_val_input[0][i], all_role_val_input[1][i], all_role_val_input[2][i]]))
 
-    np.save(os.path.join('train', 'train_output.npy'), np.concatenate([all_role_train_output[0][i], all_role_train_output[1][i], all_role_train_output[2][i]]))
-    np.save(os.path.join('test', 'test_output.npy'), np.concatenate([all_role_test_output[0][i], all_role_test_output[1][i], all_role_test_output[2][i]]))
-    np.save(os.path.join('validation', 'validation_output.npy'), np.concatenate([all_role_val_output[0][i], all_role_val_output[1][i], all_role_val_output[2][i]]))
+    np.save(os.path.join('train', 'train_output.npy'), np.concatenate([all_role_train_output[0], all_role_train_output[1], all_role_train_output[2]]))
+    np.save(os.path.join('test', 'test_output.npy'), np.concatenate([all_role_test_output[0], all_role_test_output[1], all_role_test_output[2]]))
+    np.save(os.path.join('validation', 'validation_output.npy'), np.concatenate([all_role_val_output[0], all_role_val_output[1], all_role_val_output[2]]))
     np.save(os.path.join('test', 'data_info.npy'), pd.concat(all_team_sess_ring).reset_index(drop=True))
 
 if __name__ == '__main__':
