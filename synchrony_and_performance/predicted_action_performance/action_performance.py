@@ -19,8 +19,8 @@ def compute_predictability(target_prediction_df):
     predictability_lst = []
     target = np.array(list(target_prediction_df.target)).flatten()
     prediction = np.array(list(target_prediction_df.prediction)).flatten()
-    # return 1 - np.sum((target - prediction)**2) / 90 / 4
-    return np.sum(target == prediction) / 90
+    return 1 - np.sum((target - prediction)**2) / 90 / 4
+    # return np.sum(target == prediction) / 90
     # for i in range(3):
     #     temp_target = target_prediction_df.iloc[i].target
     #     temp_pred = target_prediction_df.iloc[i].prediction
@@ -28,30 +28,25 @@ def compute_predictability(target_prediction_df):
     # return np.nanmean(np.array(predictability_lst))
 
 def get_predictability():
-    target_prediction_df = pd.DataFrame()
-
-    for i, role in enumerate(['yaw', 'pitch', 'thrust']):
-        target_prediction_arr = np.load(f'../../transformer/log_data_seed_1234/lightning_logs/version_{i}/pred_target.npy')
-        target_info = np.load(f'../../transformer/data/test/{role}/data_info.npy',  allow_pickle=True)
-        target_info_df = pd.concat(target_info)
-        target_info_df['role'] = role
-        target_info_df['target'] = list(target_prediction_arr[1].reshape(-1, 30))
-        target_info_df['prediction'] = list(target_prediction_arr[0].reshape(-1, 30))
-        target_prediction_df = pd.concat((target_prediction_df, target_info_df), ignore_index=True).reset_index(drop=True)
-    
-    predictabiltiy_df = copy.deepcopy(target_prediction_df[['teamID', 'sessionID', 'trialID', 'ringID']].drop_duplicates().reset_index(drop=True))
-    predictabiltiy_df['predictability'] = None
-
-    for i in range(len(predictabiltiy_df)):
-        temp_tstr = predictabiltiy_df.iloc[i]
-        three_role_df = target_prediction_df.loc[(target_prediction_df.teamID == temp_tstr.teamID) & 
-                                                 (target_prediction_df.sessionID == temp_tstr.sessionID)& 
-                                                 (target_prediction_df.trialID == temp_tstr.trialID)& 
-                                                 (target_prediction_df.ringID == temp_tstr.ringID)]
+    prediction_target_arr = np.load(f'../../transformer/log_data_seed_1234/lightning_logs/version_0/pred_target.npy')
+    target_info = np.load(f'../../transformer/data/test/data_info.npy',  allow_pickle=True)
+    target_info_df = pd.DataFrame(target_info)
+    unique_role_len = int(len(target_info_df)/3)
+    target_info_df = target_info_df.rename(columns={0: 'teamID', 1: 'sessionID', 2: 'trialID', 3: 'ringID'})
+    predictability_df = copy.deepcopy(target_info_df)[:unique_role_len]
+    target_info_df['target'] = list(prediction_target_arr[1].reshape(-1, 30))
+    target_info_df['prediction'] = list(prediction_target_arr[0].reshape(-1, 30))
+    target_info_df['role'] = ['Yaw'] * unique_role_len + ['Pitch'] * unique_role_len + ['Thrust'] * unique_role_len
+    for i in tqdm(range(unique_role_len)):
+        temp_tstr = predictability_df.iloc[i]
+        three_role_df = target_info_df.loc[(target_info_df.teamID == temp_tstr.teamID) & 
+                                           (target_info_df.sessionID == temp_tstr.sessionID)& 
+                                           (target_info_df.trialID == temp_tstr.trialID)& 
+                                           (target_info_df.ringID == temp_tstr.ringID)]
         temp_team_predictability = compute_predictability(three_role_df)
         if not np.isnan(temp_team_predictability):
-            predictabiltiy_df.at[i, 'predictability'] = temp_team_predictability
-    return predictabiltiy_df.dropna().reset_index(drop=True)
+            predictability_df.at[i, 'predictability'] = temp_team_predictability
+    return predictability_df
 
 def mixed_effects_model(predictability_performance_df):
     model_formula = "performance ~ predictability"
@@ -77,7 +72,11 @@ def get_predictability_and_performance(performance_df, predictability_df):
     predictability_df.performance = pd.to_numeric(predictability_df.performance)
     predictability_df.predictability = pd.to_numeric(predictability_df.predictability)
     predictability_df = predictability_df[predictability_df.teamID != 'T14']
-    return predictability_df.dropna().reset_index(drop=True)
+    predictability_df[predictability_df.teamID != 'T14']
+    import IPython
+    IPython.embed()
+    assert False
+    return predictability_df[predictability_df.teamID != 'T14'].dropna().reset_index(drop=True)
 
 def get_trial_performance(lcoation_df, predictability_df):
     performance_df = copy.deepcopy(lcoation_df)
