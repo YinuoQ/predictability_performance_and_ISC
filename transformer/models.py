@@ -28,12 +28,10 @@ class ActionPredictionModel(pl.LightningModule):
                  test_batch: int=1400,
                  num_workers: int=8,
                  data_filepath: str='data',
-                 lr_schedule: list=[100000],
-                 role: str='yaw') -> None:
+                 lr_schedule: list=[100000]) -> None:
         super().__init__()
         self.save_hyperparameters()
         self.kwargs = {'num_workers': self.hparams.num_workers, 'pin_memory': True} if self.hparams.if_cuda else {}
-        self.role = role
         
         self.__build_model()
 
@@ -42,10 +40,7 @@ class ActionPredictionModel(pl.LightningModule):
         self.model = CrossModalTransformer()
         # loss
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        if self.role != 'thrust':
-            class_weights = torch.tensor([20.0, 1.0, 20.0]).to(device)
-        else:
-            class_weights = torch.tensor([10.0, 1.0, 5.0]).to(device)
+        class_weights = torch.tensor([10.0, 1.0, 16.0]).to(device)
         self.loss_func = nn.CrossEntropyLoss(reduction='none', weight=class_weights)
         # self.loss_func = nn.L1Loss()
 
@@ -57,13 +52,6 @@ class ActionPredictionModel(pl.LightningModule):
     def correlation_arruracy(self, prediction, target):
         pred = torch.argmax(prediction, dim=1).float()
         targ = target+1
-        # pearson_r_lst = []
-        # for i in range(len(pred)):
-        #     pearson_r_lst.append(torch.abs(torch.corrcoef(torch.stack((pred[i], targ[i])))[0,1]))
-        # output = torch.nanmean(torch.FloatTensor(pearson_r_lst)) 
-        # output = self.accuracy_func(prediction, target)
- 
-        # output = -torch.sum(torch.abs(prediction - target))
         output = torch.sum(pred == targ) / (pred.shape[0] * pred.shape[1])
         return output
     
@@ -118,18 +106,15 @@ class ActionPredictionModel(pl.LightningModule):
         if stage == 'fit':
             self.train_dataset = PredictAction(flag='train',
                                                seed=self.hparams.seed,
-                                               role=self.hparams.role,
                                                dataset_folder=self.hparams.data_filepath)
             
             self.val_dataset = PredictAction(flag='validation',
                                              seed=self.hparams.seed,
-                                             role=self.hparams.role,
                                              dataset_folder=self.hparams.data_filepath)
         
         if stage == 'test':
             self.test_dataset = PredictAction(flag='test',
                                               seed=self.hparams.seed,
-                                              role=self.hparams.role,
                                               dataset_folder=self.hparams.data_filepath)
 
 

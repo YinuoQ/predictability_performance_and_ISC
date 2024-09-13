@@ -53,8 +53,7 @@ def main():
                                   test_batch=cfg.test_batch,
                                   num_workers=cfg.num_workers,
                                   data_filepath=cfg.data_filepath,
-                                  lr_schedule=cfg.lr_schedule,
-                                  role=cfg.role)
+                                  lr_schedule=cfg.lr_schedule)
 
 
     # define callback for selecting checkpoints during training

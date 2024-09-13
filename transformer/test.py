@@ -34,7 +34,7 @@ def seed(cfg):
     if cfg.if_cuda:
         torch.cuda.manual_seed(cfg.seed)
 
-def get_prediction_results(batch_prediction, target, role):
+def get_prediction_results(batch_prediction, target):
     prediction_output_lst = []
     for i in range(len(batch_prediction)):
         prediction_output_lst.append(np.array(torch.argmax(batch_prediction[i], dim=1).float().to('cpu')) - 1)
@@ -42,7 +42,7 @@ def get_prediction_results(batch_prediction, target, role):
     plt.figure(figsize=(200, 6), dpi=100)
     plt.plot(target.flatten(), '-o')
     plt.plot(np.vstack(prediction_output_lst).flatten(), '-o', alpha=0.5)
-    plt.savefig(f'prediction_results_{role}.png', bbox_inches='tight', pad_inches=0)
+    plt.savefig(f'prediction_results.png', bbox_inches='tight', pad_inches=0)
     plt.close()
 
     return np.vstack(prediction_output_lst).flatten()
@@ -78,8 +78,7 @@ def main():
                                   test_batch=cfg.test_batch,
                                   num_workers=cfg.num_workers,
                                   data_filepath=cfg.data_filepath,
-                                  lr_schedule=cfg.lr_schedule,
-                                  role=cfg.role)
+                                  lr_schedule=cfg.lr_schedule)
 
     ckpt = torch.load(checkpoint_filepath)
 
@@ -99,7 +98,7 @@ def main():
     predictions = trainer.predict(model, test_loader)
     target = test_loader.dataset.current_data[-1]
 
-    predicted_output = get_prediction_results(predictions, target, cfg.role)
+    predicted_output = get_prediction_results(predictions, target)
     np.save(f"{result_save_path}/pred_target.npy", np.vstack([predicted_output, target.flatten()]))
 
 
