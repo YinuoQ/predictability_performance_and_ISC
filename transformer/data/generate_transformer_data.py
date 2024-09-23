@@ -121,7 +121,7 @@ def reformat_input_output_data(input_output_lst):
     
     return eeg_pp_action_speech_loc, np.vstack(input_output_arr[9::10])
 
-def generate_training_testing_val_dataset(data_df, seed=1, data_split_ratio=(0.05, 0.9, 0.05)):
+def generate_training_testing_val_dataset(data_df, seed=1, data_split_ratio=(0.5, 0.45, 0.05)):
     # import IPython
     # IPython.embed()
     # assert False    
