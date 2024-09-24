@@ -40,7 +40,7 @@ class ActionPredictionModel(pl.LightningModule):
         self.model = CrossModalTransformer()
         # loss
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        class_weights = torch.tensor([10.0, 1.0, 16.0]).to(device)
+        class_weights = torch.tensor([14.4, 1.2, 9.9]).to(device)
         self.loss_func = nn.CrossEntropyLoss(reduction='none', weight=class_weights)
         # self.loss_func = nn.L1Loss()
 
@@ -49,7 +49,7 @@ class ActionPredictionModel(pl.LightningModule):
         # self.accuracy_func = classification.Accuracy()
 
 
-    def correlation_arruracy(self, prediction, target):
+    def correlation_accuracy(self, prediction, target):
         pred = torch.argmax(prediction, dim=1).float()
         targ = target+1
         output = torch.sum(pred == targ) / (pred.shape[0] * pred.shape[1])
@@ -58,7 +58,7 @@ class ActionPredictionModel(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         src1, src2, src3, src4, src5, tgt, trg_y = batch   
         pred_output = self.model(src1, src2, src3, src4, src5, tgt)
-        train_acc = self.correlation_arruracy(pred_output, trg_y)
+        train_acc = self.correlation_accuracy(pred_output, trg_y)
         train_loss = self.loss_func(pred_output, trg_y.long()+1).mean()
 
         self.log('train_loss', train_loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
@@ -71,7 +71,7 @@ class ActionPredictionModel(pl.LightningModule):
         src1, src2, src3, src4, src5, tgt, trg_y = batch   
         pred_output = self.model(src1, src2, src3, src4, src5, tgt)
         
-        val_acc = self.correlation_arruracy(pred_output, trg_y)
+        val_acc = self.correlation_accuracy(pred_output, trg_y)
         val_loss = self.loss_func(pred_output, trg_y.long()+1).mean()
         self.log('val_loss', val_loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         self.log('val_acc', val_acc, on_step=True, on_epoch=True, prog_bar=True, logger=True)
@@ -82,7 +82,7 @@ class ActionPredictionModel(pl.LightningModule):
         torch.set_grad_enabled(False)
         src1, src2, src3, src4, src5, tgt, trg_y = batch   
         pred_output = self.model(src1, src2, src3, src4, src5, tgt)
-        test_acc = self.correlation_arruracy(pred_output, trg_y)
+        test_acc = self.correlation_accuracy(pred_output, trg_y)
         test_loss = self.loss_func(pred_output, trg_y.long()+1).mean()
 
         self.log('test_loss', test_loss)

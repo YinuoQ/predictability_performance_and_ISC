@@ -7,11 +7,11 @@ from torch import nn, Tensor
 from utils import common
 
 class AdaptiveConvLayer(nn.Module):
-    def __init__(self, in_chenn_len, out_chann):
+    def __init__(self, in_chann_len, out_chann):
         super(AdaptiveConvLayer, self).__init__()
-        self.conv = nn.Conv1d(in_chenn_len, out_chann, kernel_size=1, stride=1, padding=2)
-        self.conv_loc = nn.Conv1d(in_chenn_len, out_chann, kernel_size=2, stride=1, padding=2)
-        self.conv_tgt = nn.Conv1d(in_chenn_len, out_chann, kernel_size=1, stride=1, padding=1)
+        self.conv = nn.Conv1d(in_chann_len, out_chann, kernel_size=1, stride=1, padding=2)
+        self.conv_loc = nn.Conv1d(in_chann_len, out_chann, kernel_size=2, stride=1, padding=2)
+        self.conv_tgt = nn.Conv1d(in_chann_len, out_chann, kernel_size=1, stride=1, padding=1)
     
     def forward(self, x):
         # Flatten the time dimension if necessary
@@ -79,6 +79,7 @@ class CrossModalTransformer(nn.Module):
 
         # Final layers
         self.fc1 = nn.Linear(in_features=256, out_features=90)
+        self.fc2 = nn.Linear(in_features=2048, out_features=90)
 
     def generate_subsequent_mask(self, sz1, sz2):
         mask = (torch.triu(torch.ones(sz2, sz1)) == 1).transpose(0, 1)
@@ -153,7 +154,7 @@ class CrossModalTransformer(nn.Module):
         action_cross_eeg = self.norm(action_cross_eeg)
         action_cross_pupil = self.norm(action_cross_pupil)
         action_cross_speech = self.norm(action_cross_speech)
-        action_cross_location = self.norm(speech_cross_location)
+        action_cross_location = self.norm(action_cross_location)
         action_self = self.norm(action_self)
 
         # Sum the outputs of cross-attention for each modality
@@ -164,11 +165,9 @@ class CrossModalTransformer(nn.Module):
         
         # Concatenate modalities
         concatenated = torch.cat([eeg_final, pupil_final, action_final, speech_final], dim=-2)#, speech_self
-        # import IPython
-        # IPython.embed()
-        # assert False
         
         # should remove tgt encoder here
+
         tgt = self.tgt_conv(tgt.unsqueeze(1))
         tgt = self.tgt_pos_encoder(tgt)  # Apply positional encoding to the target
         tgt_mask = self.generate_subsequent_mask(tgt.size(0), tgt.size(1)).to(self.device)
@@ -178,6 +177,8 @@ class CrossModalTransformer(nn.Module):
 
         # Final output layer
         output = self.fc1(torch.reshape(output, (-1, output.shape[1] * output.shape[2])))
+
+        # output = self.fc2(torch.reshape(concatenated, (-1, concatenated.shape[1] * concatenated.shape[2])))
         output = torch.transpose(output.view(-1, 30, 3), 1,2)
         output = torch.softmax(output, dim=1)
         return output

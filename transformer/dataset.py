@@ -52,6 +52,16 @@ class PredictAction(Dataset):
         out_action = np.load(os.path.join((self.dataset_folder), f'{self.flag}', f'{self.flag}_output.npy'), allow_pickle=True)
 
         return eeg, pupil, speech, action, location, out_action
+    
+    def get_current_data_random(self):
+        eeg = np.load(os.path.join((self.dataset_folder), f'{self.flag}_random', f'{self.flag}_eeg.npy'), allow_pickle=True)
+        pupil = np.load(os.path.join((self.dataset_folder), f'{self.flag}_random', f'{self.flag}_pupil.npy'), allow_pickle=True)
+        speech = np.load(os.path.join((self.dataset_folder), f'{self.flag}_random', f'{self.flag}_speech.npy'), allow_pickle=True)
+        action = np.load(os.path.join((self.dataset_folder), f'{self.flag}_random', f'{self.flag}_action.npy'), allow_pickle=True)
+        location = np.load(os.path.join((self.dataset_folder), f'{self.flag}_random', f'{self.flag}_location.npy'), allow_pickle=True)
+        out_action = np.load(os.path.join((self.dataset_folder), f'{self.flag}_random', f'{self.flag}_output.npy'), allow_pickle=True)
+
+        return eeg, pupil, speech, action, location, out_action
 
     def get_src_trg(self, sequence1: torch.Tensor, sequence2: torch.Tensor, sequence3: torch.Tensor, sequence4: torch.Tensor, sequence5: torch.Tensor, output_seq: torch.Tensor):
 
@@ -79,11 +89,10 @@ class PredictAction(Dataset):
         src5 = sequence5
 
         # The target sequence against which the model output will be compared to compute loss   
-        last_element = torch.tensor([(torch.mean(src1[:,:,-1]) + torch.mean(src2[:,-1]) + torch.mean(src3[:,-1]) + torch.mean(src4[:,-1]) + torch.mean(src5[:,-1]))/5])
         if self.flag != 'test':
-            tgt = torch.cat((last_element, output_seq[:-1]), dim=0)
+            tgt = torch.cat((output_seq[:1], output_seq[:-1]), dim=0)  # Shifting output_seq
         else:
-            tgt = torch.cat((last_element, torch.zeros(29)), dim=0)
+            tgt = torch.cat((output_seq[:1], torch.zeros_like(output_seq[:-1])), dim=0)
 
         trg_y = output_seq
         # We only want trg_y to consist of the target variable not any potential exogenous variables

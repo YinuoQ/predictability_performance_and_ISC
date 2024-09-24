@@ -42,6 +42,7 @@ def get_prediction_results(batch_prediction, target):
     plt.figure(figsize=(200, 6), dpi=100)
     plt.plot(target.flatten(), '-o')
     plt.plot(np.vstack(prediction_output_lst).flatten(), '-o', alpha=0.5)
+    plt.legend(['target', 'prediction'])
     plt.savefig(f'prediction_results.png', bbox_inches='tight', pad_inches=0)
     plt.close()
 
