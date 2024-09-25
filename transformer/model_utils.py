@@ -168,17 +168,17 @@ class CrossModalTransformer(nn.Module):
         
         # should remove tgt encoder here
 
-        tgt = self.tgt_conv(tgt.unsqueeze(1))
-        tgt = self.tgt_pos_encoder(tgt)  # Apply positional encoding to the target
-        tgt_mask = self.generate_subsequent_mask(tgt.size(0), tgt.size(1)).to(self.device)
-        tgt = self.tgt_attention(tgt, tgt, tgt, key_padding_mask=tgt_mask)[0]
-        output = self.output_attention(tgt, concatenated, concatenated)[0]
-        # output = self.tgt_norm(output)
+        # tgt = self.tgt_conv(tgt.unsqueeze(1))
+        # tgt = self.tgt_pos_encoder(tgt)  # Apply positional encoding to the target
+        # tgt_mask = self.generate_subsequent_mask(tgt.size(0), tgt.size(1)).to(self.device)
+        # tgt = self.tgt_attention(tgt, tgt, tgt, key_padding_mask=tgt_mask)[0]
+        # output = self.output_attention(tgt, concatenated, concatenated)[0]
+        # # output = self.tgt_norm(output)
 
         # Final output layer
-        output = self.fc1(torch.reshape(output, (-1, output.shape[1] * output.shape[2])))
+        # output = self.fc1(torch.reshape(output, (-1, output.shape[1] * output.shape[2])))
 
-        # output = self.fc2(torch.reshape(concatenated, (-1, concatenated.shape[1] * concatenated.shape[2])))
+        output = self.fc2(torch.reshape(concatenated, (-1, concatenated.shape[1] * concatenated.shape[2])))
         output = torch.transpose(output.view(-1, 30, 3), 1,2)
         output = torch.softmax(output, dim=1)
         return output
