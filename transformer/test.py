@@ -40,6 +40,7 @@ def get_prediction_results(batch_prediction, target):
         prediction_output_lst.append(np.array(torch.argmax(batch_prediction[i], dim=1).float().to('cpu')) - 1)
 
     plt.figure(figsize=(200, 6), dpi=100)
+    target = target[:,30:]
     plt.plot(target.flatten(), '-o')
     plt.plot(np.vstack(prediction_output_lst).flatten(), '-o', alpha=0.5)
     plt.legend(['target', 'prediction'])
@@ -100,7 +101,7 @@ def main():
     target = test_loader.dataset.current_data[-1]
 
     predicted_output = get_prediction_results(predictions, target)
-    np.save(f"{result_save_path}/pred_target.npy", np.vstack([predicted_output, target.flatten()]))
+    np.save(f"{result_save_path}/pred_target.npy", np.vstack([predicted_output, target[:,30:].flatten()]))
 
 
 

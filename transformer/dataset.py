@@ -11,7 +11,7 @@ class PredictAction(Dataset):
 
         self.seed = seed
         self.dataset_folder = dataset_folder
-        self.current_data = self.get_current_data()
+        self.current_data = self.get_current_data_random()
         self.target_seq_len = 30
 
     def __len__(self):
@@ -50,7 +50,7 @@ class PredictAction(Dataset):
         action = np.load(os.path.join((self.dataset_folder), f'{self.flag}', f'{self.flag}_action.npy'), allow_pickle=True)
         location = np.load(os.path.join((self.dataset_folder), f'{self.flag}', f'{self.flag}_location.npy'), allow_pickle=True)
         out_action = np.load(os.path.join((self.dataset_folder), f'{self.flag}', f'{self.flag}_output.npy'), allow_pickle=True)
-
+   
         return eeg, pupil, speech, action, location, out_action
     
     def get_current_data_random(self):
@@ -89,11 +89,12 @@ class PredictAction(Dataset):
         src5 = sequence5
 
         # The target sequence against which the model output will be compared to compute loss   
-        if self.flag != 'test':
-            tgt = torch.cat((output_seq[:1], output_seq[:-1]), dim=0)  # Shifting output_seq
-        else:
-            tgt = torch.cat((output_seq[:1], torch.zeros_like(output_seq[:-1])), dim=0)
+        # if self.flag != 'test':
+        #     tgt = torch.cat((output_seq[:1], output_seq[:-1]), dim=0)  # Shifting output_seq
+        # else:
+        #     tgt = torch.cat((output_seq[:1], torch.zeros_like(output_seq[:-1])), dim=0)
 
-        trg_y = output_seq
+        tgt = output_seq[:self.target_seq_len]
+        trg_y = output_seq[self.target_seq_len:]
         # We only want trg_y to consist of the target variable not any potential exogenous variables
         return src1, src2, src3, src4, src5, tgt, trg_y
