@@ -95,7 +95,7 @@ def select_model_input_and_output(data_df, start_id, end_id, role):
             input_data_lst.append(np.array(list(data_df.iloc[start_id:end_id][f'{input_role[0]}{modality}']))[:,:60])
             input_data_lst.append(np.array(list(data_df.iloc[start_id:end_id][f'{input_role[1]}{modality}']))[:,:60])
     
-    input_data_lst.append(np.array(list(data_df.iloc[start_id:end_id][f'{role}Action']))[:,:])
+    input_data_lst.append(np.array(list(data_df.iloc[start_id:end_id][f'{role}Action']))[:,30:])
 
     return input_data_lst 
 
