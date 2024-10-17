@@ -54,3 +54,5 @@ data
 transformer/data/*
 !transformer/data/*.py
 
+*.pkl
+synchrony_and_performance/predicted_action_performance/epoched_raw_location.pkl
