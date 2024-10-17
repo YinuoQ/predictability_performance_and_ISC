@@ -57,10 +57,12 @@ def main():
 
 
     # define callback for selecting checkpoints during training
-    checkpoint_callback = ModelCheckpoint(filename=log_dir + "{epoch}_{val_acc:.3f}_{val_loss:.3f}",
+    checkpoint_callback = ModelCheckpoint(filename=log_dir + "{epoch}_{val_acc:.9f}_{val_loss:.9f}",
                                           verbose=True,
                                           monitor='val_loss',
                                           mode='min')
+    
+    
     # define trainer
     trainer = Trainer(max_epochs=cfg.epochs,
                       default_root_dir=log_dir,

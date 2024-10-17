@@ -120,10 +120,7 @@ def reformat_input_output_data(input_output_lst):
     
     return eeg_pp_action_speech_loc, np.vstack(input_output_arr[9::10])
 
-def generate_training_testing_val_dataset(data_df, seed=1, data_split_ratio=(0.5, 0.45, 0.05)):
-    # import IPython
-    # IPython.embed()
-    # assert False    
+def generate_training_testing_val_dataset(data_df, seed, data_split_ratio=(0.6, 0.35, 0.05)):   
     unique_team = data_df[['teamID', 'sessionID']].drop_duplicates().reset_index(drop=True)
     role_lst = ['yaw', 'pitch', 'thrust']
     all_role_train_input = []
@@ -150,7 +147,7 @@ def generate_training_testing_val_dataset(data_df, seed=1, data_split_ratio=(0.5
             training_lst += temp_training_lst
             testing_lst += temp_testing_lst
             validation_lst += temp_validation_lst
-            test_team_sess_trial_ring_lst.append(temp_data_df[['teamID', 'sessionID', 'trialID', 'ringID']].iloc[train_end:test_end])
+            test_team_sess_trial_ring_lst.append(shuffled_df[['teamID', 'sessionID', 'trialID', 'ringID']].iloc[train_end:test_end])
   
         test_team_sess_trial_ring_df = pd.concat(test_team_sess_trial_ring_lst)
 
@@ -165,28 +162,27 @@ def generate_training_testing_val_dataset(data_df, seed=1, data_split_ratio=(0.5
         all_role_val_output.append(validation_arr_output)
         all_team_sess_ring.append(test_team_sess_trial_ring_df)
 
-    mkdir(os.path.join('train'))
-    mkdir(os.path.join('test'))
-    mkdir(os.path.join('validation'))
+    mkdir(os.path.join(f'seed_{seed}', 'train'))
+    mkdir(os.path.join(f'seed_{seed}', 'test'))
+    mkdir(os.path.join(f'seed_{seed}', 'validation'))
     for i, modality in enumerate(['EEG', 'Pupil', 'Action', 'Speech', 'location']):
-        np.save(os.path.join('train', f'train_{modality.lower()}.npy'), np.concatenate([all_role_train_input[0][i], all_role_train_input[1][i], all_role_train_input[2][i]]))
-        np.save(os.path.join('test', f'test_{modality.lower()}.npy'), np.concatenate([all_role_test_input[0][i], all_role_test_input[1][i], all_role_test_input[2][i]]))
-        np.save(os.path.join('validation', f'validation_{modality.lower()}.npy'), np.concatenate([all_role_val_input[0][i], all_role_val_input[1][i], all_role_val_input[2][i]]))
+        np.save(os.path.join(f'seed_{seed}', 'train', f'train_{modality.lower()}.npy'), np.concatenate([all_role_train_input[0][i], all_role_train_input[1][i], all_role_train_input[2][i]]))
+        np.save(os.path.join(f'seed_{seed}', 'test', f'test_{modality.lower()}.npy'), np.concatenate([all_role_test_input[0][i], all_role_test_input[1][i], all_role_test_input[2][i]]))
+        np.save(os.path.join(f'seed_{seed}', 'validation', f'validation_{modality.lower()}.npy'), np.concatenate([all_role_val_input[0][i], all_role_val_input[1][i], all_role_val_input[2][i]]))
 
-    np.save(os.path.join('train', 'train_output.npy'), np.concatenate([all_role_train_output[0], all_role_train_output[1], all_role_train_output[2]]))
-    np.save(os.path.join('test', 'test_output.npy'), np.concatenate([all_role_test_output[0], all_role_test_output[1], all_role_test_output[2]]))
-    np.save(os.path.join('validation', 'validation_output.npy'), np.concatenate([all_role_val_output[0], all_role_val_output[1], all_role_val_output[2]]))
-    np.save(os.path.join('test', 'data_info.npy'), pd.concat(all_team_sess_ring).reset_index(drop=True))
+    np.save(os.path.join(f'seed_{seed}', 'train', 'train_output.npy'), np.concatenate([all_role_train_output[0], all_role_train_output[1], all_role_train_output[2]]))
+    np.save(os.path.join(f'seed_{seed}', 'test', 'test_output.npy'), np.concatenate([all_role_test_output[0], all_role_test_output[1], all_role_test_output[2]]))
+    np.save(os.path.join(f'seed_{seed}', 'validation', 'validation_output.npy'), np.concatenate([all_role_val_output[0], all_role_val_output[1], all_role_val_output[2]]))
+    np.save(os.path.join(f'seed_{seed}', 'test', 'data_info.npy'), pd.concat(all_team_sess_ring).reset_index(drop=True))
 
 if __name__ == '__main__':
     path = '../../data'
-    seed = 1234
-
-    pd.set_option('display.max_columns', None)
-    action_df, location_df, pupil_df, eeg_df, speech_df, ring_df, performance_df = read_data(path)
-    transformer_data_df = transformer_data_generator(action_df, location_df, pupil_df, eeg_df, speech_df, ring_df, performance_df)   
-    generate_training_testing_val_dataset(transformer_data_df, seed)
-    
+    for seed in [1,2,3]:
+        pd.set_option('display.max_columns', None)
+        action_df, location_df, pupil_df, eeg_df, speech_df, ring_df, performance_df = read_data(path)
+        transformer_data_df = transformer_data_generator(action_df, location_df, pupil_df, eeg_df, speech_df, ring_df, performance_df)   
+        generate_training_testing_val_dataset(transformer_data_df, seed)
+        
 
 
 
