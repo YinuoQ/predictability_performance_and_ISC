@@ -35,12 +35,7 @@ def main():
     seed(cfg)
     seed_everything(cfg.seed)
 
-    model_name = cfg.data_filepath.split('/')[-1]
-
-    log_dir = '_'.join([cfg.log_dir,
-                        model_name,
-                        'seed',
-                        str(cfg.seed)])
+    log_dir = '_'.join([cfg.log_dir])
     
     model = ActionPredictionModel(lr=cfg.lr,
                                   seed=cfg.seed,

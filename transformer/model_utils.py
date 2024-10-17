@@ -51,7 +51,7 @@ class CrossModalTransformer(nn.Module):
     def __init__(self, num_classes=3, time_steps=30):
         super(CrossModalTransformer, self).__init__()
         self.num_heads = 8
-        self.conv_output_dim = 32
+        self.conv_output_dim = 64
         self.num_classes = num_classes
         self.time_steps = time_steps
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -68,7 +68,6 @@ class CrossModalTransformer(nn.Module):
 
         # normalization
         self.norm = nn.LayerNorm(self.conv_output_dim)
-        self.concat_norm = nn.LayerNorm(self.conv_output_dim*6)
 
         # Cross-modal attention layers (self-attention for query/value and cross-attention for key)
         self.attention = nn.MultiheadAttention(self.conv_output_dim, self.num_heads, batch_first=True)
@@ -79,15 +78,15 @@ class CrossModalTransformer(nn.Module):
         self.concat_multi_modal = nn.Linear(in_features=self.conv_output_dim, out_features=self.conv_output_dim)
 
         # Final layers
-        self.fc1 = nn.Linear(in_features=1024, out_features=90)
-        self.output_norm = nn.LayerNorm(90)
+        self.fc1 = nn.Linear(in_features=2048, out_features=90)
+
 
     def generate_subsequent_mask(self, sz1, sz2):
         mask = (torch.triu(torch.ones(sz2, sz1)) == 1).transpose(0, 1)
         mask = mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0))
         return mask
     
-    def encoder_layer(self, eeg, pupil, action, location):
+    def encoder_layer(self, eeg, pupil, action, location, speech):
         # Cross-modality attention 
         eeg = self.attention(eeg, location, location, need_weights=False)[0]
         eeg = self.norm(eeg)
@@ -102,14 +101,13 @@ class CrossModalTransformer(nn.Module):
         action = self.attention(action, location, location, need_weights=False)[0]
         action = self.norm(action)
         action = self.attention(action, action, action, need_weights=False)[0]
-        action = self.norm(action)    
+        action = self.norm(action)   
 
         # Concatenate modalities
-        concatenated = torch.cat([eeg, pupil, action], dim=-2)#, location_self
-        concatenated = self.norm(concatenated)
+        concatenated = torch.cat([eeg, pupil, action], dim=-2)#, speech
         concatenated = self.feed_forward(concatenated)
-        # relu = nn.ReLU()
-        # concatenated = relu(concatenated)
+        relu = nn.ReLU()
+        concatenated = relu(concatenated)
         concatenated = self.norm(concatenated)
 
         return concatenated
@@ -132,20 +130,17 @@ class CrossModalTransformer(nn.Module):
         pupil = self.pupil_speech_action_conv(pupil)
         action = self.pupil_speech_action_conv(action)
         location = self.location_conv(location)
+        # speech = self.pupil_speech_action_conv(speech)
 
         # Apply positional encoding
         eeg = self.pos_encoder(eeg)
         pupil = self.pos_encoder(pupil)
         action = self.pos_encoder(action)
         location = self.pos_encoder(location)
+        # speech = self.pos_encoder(speech)
 
-        # normalizing 
-        # eeg = self.norm(eeg)
-        # pupil = self.norm(pupil)
-        # action = self.norm(action)
-        # location = self.norm(location)
 
-        concatenated = self.encoder_layer(eeg, pupil, action, location)
+        concatenated = self.encoder_layer(eeg, pupil, action, location, speech)
         output = self.decoder_layer(concatenated, tgt)
 
         # Final output layer

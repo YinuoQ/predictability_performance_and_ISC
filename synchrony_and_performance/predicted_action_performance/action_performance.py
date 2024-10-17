@@ -34,7 +34,7 @@ def compute_predictability(target_prediction_df):
     # return np.nanmean(predictability_lst)
 
 def get_predictability(seed):
-    prediction_target_arr = np.load(f'../../transformer/log_seed_{seed}_seed_{seed}/lightning_logs/version_0/pred_target.npy')
+    prediction_target_arr = np.load(f'../../transformer/log/lightning_logs/version_{seed-1}/pred_target.npy')
     target_info = np.load(f'../../transformer/data/seed_{seed}/test/data_info.npy',  allow_pickle=True)
     target_info_df = pd.DataFrame(target_info)
     unique_role_len = int(len(target_info_df)/3)
@@ -58,7 +58,7 @@ def mixed_effects_model(predictability_performance_df):
     model_formula = "performance ~ predictability"
     predictability_performance_df['session'] = predictability_performance_df.sessionID.apply(lambda x: int(x[1:]))
     valid_df = predictability_performance_df
-    model = smf.mixedlm(model_formula, valid_df, groups=valid_df['teamID'])
+    model = smf.mixedlm(model_formula, valid_df, groups=valid_df['teamID'], re_formula='1')
     model_result = model.fit()
     print(model_result.summary())
 
@@ -107,7 +107,7 @@ def get_trial_performance(lcoation_df, predictability_df):
     a = performance_df.dropna().reset_index(drop=True)
     a.predictability = pd.to_numeric(a.predictability)
     model_formula = "performance ~ predictability"
-    model = smf.mixedlm(model_formula, a, groups=a['teamID'])#, re_formula='sessionID')
+    model = smf.mixedlm(model_formula, a, groups=a['teamID'], re_formula='1')
     model_result = model.fit()
     print(model_result.summary())
 

@@ -1,0 +1,15 @@
+data_filepath: data/seed_1
+gamma: 0.5
+if_cuda: true
+if_test: false
+log_dir: log
+lr: 5.0e-05
+lr_schedule:
+- 25
+- 50
+- 75
+num_workers: 8
+seed: 1
+test_batch: 500
+train_batch: 500
+val_batch: 500

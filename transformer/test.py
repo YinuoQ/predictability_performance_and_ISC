@@ -62,19 +62,14 @@ def main():
     seed(cfg)
     seed_everything(cfg.seed)
     
-    model_name = cfg.data_filepath.split('/')[-1]
-
-    log_dir = '_'.join([cfg.log_dir,
-                        model_name,
-                        'seed',
-                        str(cfg.seed)])
+    log_dir = '_'.join([cfg.log_dir])
     
     model = ActionPredictionModel(lr=cfg.lr,
                                   seed=cfg.seed,
                                   if_cuda=cfg.if_cuda,
                                   if_test=False,
                                   gamma=cfg.gamma,
-                                  log_dir=cfg.log_dir,
+                                  log_dir=log_dir,
                                   train_batch=cfg.train_batch,
                                   val_batch=cfg.val_batch,
                                   test_batch=cfg.test_batch,
