@@ -60,7 +60,7 @@ def compute_speech_ISC(speech_performance_df):
 
 def mixed_effects_model(speech_ISC_df):
     model_formula = "performance ~ speechISC"
-    model = smf.mixedlm(model_formula, speech_ISC_df, groups=speech_ISC_df['teamID'])
+    model = smf.mixedlm(model_formula, speech_ISC_df, groups=speech_ISC_df['teamID'], re_formula='1 + sessionID')
     # Fit the model
     model_result = model.fit()
     print(model_result.summary())

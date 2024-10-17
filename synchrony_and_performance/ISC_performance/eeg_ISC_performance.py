@@ -45,7 +45,7 @@ def compute_eeg_ISC(eeg_performance_df):
 
 def mixed_effects_model(eeg_ISC_df):
     model_formula = "performance ~ eegISC"
-    model = smf.mixedlm(model_formula, eeg_ISC_df, groups=eeg_ISC_df['teamID'])
+    model = smf.mixedlm(model_formula, eeg_ISC_df, groups=eeg_ISC_df['teamID'], re_formula='1 + sessionID')
     # Fit the model
     model_result = model.fit()
     print(model_result.summary())

@@ -82,7 +82,7 @@ def get_trialed_pupil_ISC_with_performance(lcoation_df, pupil_df):
 
 def mixed_effects_model(pupil_ISC_df):
     model_formula = "performance ~ pupilISC"
-    model = smf.mixedlm(model_formula, pupil_ISC_df, groups=pupil_ISC_df['teamID'])
+    model = smf.mixedlm(model_formula, pupil_ISC_df, groups=pupil_ISC_df['teamID'], re_formula='1 + sessionID')
     # Fit the model
     model_result = model.fit()
     print(model_result.summary())

@@ -20,18 +20,7 @@ def compute_predictability(target_prediction_df):
     target = np.array(list(target_prediction_df.target)).flatten()
     prediction = np.array(list(target_prediction_df.prediction)).flatten()
     return np.sum(target != prediction) / 90
-    # return np.mean(np.abs(target - prediction)) 
-    # for i in range(3):
-    #     temp_target = target_prediction_df.iloc[i].target
-    #     temp_pred = target_prediction_df.iloc[i].prediction
-    #     if np.sum(temp_target == temp_pred) == 30:
-    #         predictability_lst.append(1)
-    #     elif not np.isnan(np.corrcoef(temp_target, temp_pred)[0,1]):
-    #         predictability_lst.append(np.corrcoef(temp_target, temp_pred)[0,1]) 
-    #     else:
-    #         predictability_lst.append(0)        
-        
-    # return np.nanmean(predictability_lst)
+
 
 def get_predictability(seed):
     prediction_target_arr = np.load(f'../../transformer/log/lightning_logs/version_{seed-1}/pred_target.npy')
@@ -58,7 +47,7 @@ def mixed_effects_model(predictability_performance_df):
     model_formula = "performance ~ predictability"
     predictability_performance_df['session'] = predictability_performance_df.sessionID.apply(lambda x: int(x[1:]))
     valid_df = predictability_performance_df
-    model = smf.mixedlm(model_formula, valid_df, groups=valid_df['teamID'], re_formula='1')
+    model = smf.mixedlm(model_formula, valid_df, groups=valid_df['teamID'], re_formula='1 + sessionID')
     model_result = model.fit()
     print(model_result.summary())
 
@@ -107,7 +96,7 @@ def get_trial_performance(lcoation_df, predictability_df):
     a = performance_df.dropna().reset_index(drop=True)
     a.predictability = pd.to_numeric(a.predictability)
     model_formula = "performance ~ predictability"
-    model = smf.mixedlm(model_formula, a, groups=a['teamID'], re_formula='1')
+    model = smf.mixedlm(model_formula, a, groups=a['teamID'], re_formula='1+sessionID')
     model_result = model.fit()
     print(model_result.summary())
 
@@ -115,8 +104,7 @@ def get_trial_performance(lcoation_df, predictability_df):
 if __name__ == '__main__':
     path = '../../data'
     pd.set_option('display.max_columns', None)
-    # lcoation_df = pd.read_pickle(os.path.join(path, 'epoched_raw_location.pkl'))
-    lcoation_df = pd.read_pickle('epoched_raw_location.pkl')
+    lcoation_df = pd.read_pickle(os.path.join(path, 'epoched_raw_location.pkl'))
     warnings.filterwarnings('ignore')
     # epoch based performances
     performance_df = get_performance(lcoation_df)

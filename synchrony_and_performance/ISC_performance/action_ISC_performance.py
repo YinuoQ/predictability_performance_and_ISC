@@ -82,7 +82,7 @@ def compute_action_ISC(action_performance_df):
 def mixed_effects_model(action_ISC_df):
     model_formula = "performance ~ actionISC"
     print(model_formula)
-    model = smf.mixedlm(model_formula, action_ISC_df, groups=action_ISC_df['teamID'])
+    model = smf.mixedlm(model_formula, action_ISC_df, groups=action_ISC_df['teamID'], re_formula='1 + sessionID')
     # Fit the model
     model_result = model.fit()
     print(model_result.summary())
@@ -101,24 +101,6 @@ if __name__ == '__main__':
     
     # trial based performances
     action_performance_df = get_trialed_action_ISC_with_performance(lcoation_df, action_df)
-    # import IPython
-    # IPython.embed()
-    # assert False
-    # fig, ax = plt.subplots(3,6, figsize=(30, 10),sharey=True)
-    # plt.tight_layout(pad=2)
-    # teamID_lst = action_performance_df.teamID.unique()
-    # for i in range(3):
-    #     for j in range(6):
-    #         y = action_performance_df[action_performance_df.teamID == teamID_lst[i*6+j]].performance
-    #         x = action_performance_df[action_performance_df.teamID == teamID_lst[i*6+j]].actionISC
-    #         linregress_result = linregress(x,y)
-    #         ax[i,j].plot(x,y, 'o')
-    #         ax[i,j].plot([0,1], np.array([0,1])*linregress_result.slope+linregress_result.intercept)
-    #         ax[i,j].text(0.5,1,f"r-value = {format(linregress_result.rvalue, '.3f')}")
-    #         ax[i,j].text(0.5,2,f"slope = {format(linregress_result.slope, '.3f')}")
-    #         ax[i,j].set_title(f"{teamID_lst[i*6+j]}")
-    #         ax[i,0].set_ylabel("performance")
-    # plt.savefig('action_performance.png')
     mixed_effects_model(action_performance_df)
 
 

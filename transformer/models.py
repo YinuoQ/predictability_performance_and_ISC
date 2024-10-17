@@ -46,16 +46,8 @@ class ActionPredictionModel(pl.LightningModule):
 
     def correlation_accuracy(self, prediction, target):
         prediction = torch.argmax(torch.softmax(prediction, dim=1), dim=1)
-
         output = torch.sum(prediction == target) / (prediction.shape[0] * prediction.shape[1])
 
-        # output_tensor = torch.zeros(len(target))
-        # for i in range(len(target)):
-        #     if torch.sum(target[i:i+1] == prediction[i:i+1]) == 30:
-        #         output_tensor[i] = 1
-        #     else:
-        #         output_tensor[i] = torch.corrcoef(torch.cat((target[i:i+1], prediction[i:i+1]), 0))[0,1]
-        # output = torch.nanmean(output_tensor)
         return output
     
     def training_step(self, batch, batch_idx):
