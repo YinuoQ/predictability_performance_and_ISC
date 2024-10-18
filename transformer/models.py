@@ -45,7 +45,7 @@ class ActionPredictionModel(pl.LightningModule):
  
 
     def correlation_accuracy(self, prediction, target):
-        prediction = torch.argmax(torch.softmax(prediction, dim=1), dim=1)
+        prediction = torch.argmax(prediction, dim=1)
         output = torch.sum(prediction == target) / (prediction.shape[0] * prediction.shape[1])
 
         return output
