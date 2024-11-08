@@ -1,0 +1,14 @@
+data_filepath: ../data/thrust/split_0
+epochs: 20
+gamma: 0.8
+if_cuda: True
+log_dir: log_thrust
+lr: 0.00005
+lr_schedule:
+- 10
+num_gpus: 1
+num_workers: 8
+seed: 1
+test_batch: 500
+train_batch: 500
+val_batch: 500
