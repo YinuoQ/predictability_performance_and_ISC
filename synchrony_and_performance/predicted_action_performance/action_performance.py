@@ -41,7 +41,7 @@ def get_predictability(seed):
         temp_team_predictability = compute_predictability(three_role_df)
         if not np.isnan(temp_team_predictability):
             predictability_df.at[i, 'predictability'] = temp_team_predictability
-    return predictability_df
+    return predictability_df, prediction_target_arr
 
 def mixed_effects_model(predictability_performance_df):
     model_formula = "performance ~ predictability"
@@ -100,6 +100,15 @@ def get_trial_performance(lcoation_df, predictability_df):
     model_result = model.fit()
     print(model_result.summary())
 
+def plot_prediction_results(target_arr):
+    import IPython
+    IPython.embed()
+    assert False
+    reshaped_tar = target_arr.reshape((3,2,30,-1))
+    for i in range(10):
+        plt.plot(reshaped_tar[0,0,:,i])
+        plt.plot(reshaped_tar[0,1,:,i], '--')
+        plt.show()
 
 if __name__ == '__main__':
     path = '../../data'
@@ -109,13 +118,15 @@ if __name__ == '__main__':
     # epoch based performances
     performance_df = get_performance(lcoation_df)
     predictability_df = pd.DataFrame()
+    target_lst = []
     for seed in [1,2,3]:
-        predictability_df = pd.concat((predictability_df, get_predictability(seed)))
+        temp_pred, temp_target = get_predictability(seed)
+        predictability_df = pd.concat((predictability_df, temp_pred))
+        target_lst.append(temp_target)
     predictability_df = predictability_df.reset_index(drop=True)
+    
+    plot_prediction_results(np.stack(target_lst))
     pred_perf_df = get_predictability_and_performance(performance_df, predictability_df)
-    # import IPython
-    # IPython.embed()
-    # assert False
     mixed_effects_model(pred_perf_df)
 
     # trial based performances

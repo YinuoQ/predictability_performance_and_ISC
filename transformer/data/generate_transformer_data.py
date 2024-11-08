@@ -7,6 +7,7 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt
 sys.path.insert(1, '../utils')
 from common import mkdir
+from sklearn.model_selection import train_test_split
 
 def read_data(path):
     action_df = pd.read_pickle(os.path.join(path, 'epoched_action.pkl'))
@@ -19,17 +20,9 @@ def read_data(path):
     return action_df, location_df, pupil_df, eeg_df, speech_df, ring_df, performance_df
 
 def transformer_data_generator(action_df, location_df, pupil_df, eeg_df, speech_df, ring_df, performance_df):
-    eeg_df['yawAction'] = None
-    eeg_df['pitchAction'] = None
-    eeg_df['thrustAction'] = None
-    eeg_df['yawSpeech'] = None
-    eeg_df['pitchSpeech'] = None
-    eeg_df['thrustSpeech'] = None
-    eeg_df['yawPupil'] = None
-    eeg_df['pitchPupil'] = None
-    eeg_df['thrustPupil'] = None
-    eeg_df['location'] = None
-    eeg_df['performance'] = None
+    eeg_df = eeg_df.assign(yawAction=None, pitchAction=None, thrustAction=None, yawSpeech=None, 
+                           pitchSpeech=None, thrustSpeech=None, yawPupil=None, pitchPupil=None, 
+                           thrustPupil=None, location=None, performance=None)
     for i in tqdm(range(len(eeg_df))):
         team_sess_trial_ring = eeg_df.iloc[i][['teamID', 'sessionID', 'trialID', 'ringID']]
         query_string = f"teamID == '{team_sess_trial_ring[0]}' and sessionID == '{team_sess_trial_ring[1]}' \
@@ -41,8 +34,11 @@ def transformer_data_generator(action_df, location_df, pupil_df, eeg_df, speech_
         temp_ring = ring_df.query(query_string)
         temp_performance = performance_df.query(query_string)
 
-        eeg_df.at[i, 'location'] = np.concatenate((temp_location.location.iloc[0], np.array(temp_ring[['ringX', 'ringY', 'ringZ']]).T), axis=1)
-        eeg_df.at[i, 'performance'] = temp_performance.performance.iloc[0]
+        if not temp_location.empty and not temp_ring.empty:
+            eeg_df.at[i, 'location'] = np.concatenate((temp_location.location.iloc[0], np.array(temp_ring[['ringX', 'ringY', 'ringZ']]).T), axis=1)
+        if not temp_performance.empty:    
+            eeg_df.at[i, 'performance'] = temp_performance.performance.iloc[0]
+
         if len(temp_action) == 1:
             eeg_df.at[i, 'yawAction'] = temp_action.yawAction.iloc[0]
             eeg_df.at[i, 'pitchAction'] = temp_action.pitchAction.iloc[0]
@@ -55,134 +51,106 @@ def transformer_data_generator(action_df, location_df, pupil_df, eeg_df, speech_
             eeg_df.at[i, 'yawPupil'] = temp_pupil.yawPupil.iloc[0]
             eeg_df.at[i, 'pitchPupil'] = temp_pupil.pitchPupil.iloc[0]
             eeg_df.at[i, 'thrustPupil'] = temp_pupil.thrustPupil.iloc[0]
+
     return eeg_df.dropna().reset_index(drop=True)
 
-def shuffle_data(arr, seed):
-    np.random.seed(seed)
-    np.random.shuffle(arr)
-    return arr
 
-def train_test_val_split(input_arr, team_id_arr, data_split_ratio):
-    num_rows = input_arr.shape[0]
-    train_end_idx = int(num_rows * data_split_ratio[0])
-    val_end_idx = int(num_rows * data_split_ratio[1]) + train_end_idx
-    train_arr = input_arr[:train_end_idx, :]
-    val_arr = input_arr[train_end_idx:val_end_idx, :]
-    test_arr = input_arr[val_end_idx:, :]
-    test_team_id_arr = team_id_arr[val_end_idx:, :]
-    return train_arr, val_arr, test_arr, test_team_id_arr
-
-def select_model_input_and_output(data_df, start_id, end_id, role):
-
-    role_2_id = {'yaw': 0,
-                'pitch': 1,
-                'thrust': 2}
-
-    id_2_role = {0: 'yaw',
-                 1: 'pitch',
-                 2: 'thrust'}    
-    all_role_val = list(range(3))
-    all_role_val.remove(role_2_id[role])
-    input_role = [id_2_role[x] for x in all_role_val]
-    input_data_lst = []
-    for modality in ['EEG', 'Pupil', 'Action', 'Speech', 'location']:
-        if modality == 'EEG':
-            input_data_lst.append(np.array(list(data_df.iloc[start_id:end_id][f'{input_role[0]}{modality}']))[:,:,:256])
-            input_data_lst.append(np.array(list(data_df.iloc[start_id:end_id][f'{input_role[1]}{modality}']))[:,:,:256])
-        elif modality == 'location':
-            input_data_lst.append(np.array(list(data_df.iloc[start_id:end_id][f'{modality}'])))
-        else:
-            input_data_lst.append(np.array(list(data_df.iloc[start_id:end_id][f'{input_role[0]}{modality}']))[:,:60])
-            input_data_lst.append(np.array(list(data_df.iloc[start_id:end_id][f'{input_role[1]}{modality}']))[:,:60])
-    
-    input_data_lst.append(np.array(list(data_df.iloc[start_id:end_id][f'{role}Action']))[:,30:])
-
-    return input_data_lst 
-
-def reformat_input_output_data(input_output_lst):
-    eeg_pp_action_speech_loc = []
-    input_output_arr = np.array(input_output_lst, dtype=object)
-    
-
-    for i in [0,2,4,6]:
-        # Reshape the array to have 10 rows (each row corresponds to one of the 9 groups)
-        reshaped_arr_9th = input_output_arr[i::10]
-        reshaped_arr_10th = input_output_arr[i+1::10]
-
-        # Stack the 9th and 10th elements row-wise
-        if i == 0:
-            stacked_arr = np.concatenate((np.vstack(reshaped_arr_9th)[:, None, :,:], np.vstack(reshaped_arr_10th)[:, None, :,:]), axis=1)
-        else:
-            stacked_arr = np.concatenate((np.vstack(reshaped_arr_9th)[:, None,:], np.vstack(reshaped_arr_10th)[:, None,:]), axis=1)
-        # Concatenate the stacked arrays along the first axis
-        eeg_pp_action_speech_loc.append(stacked_arr)
-    eeg_pp_action_speech_loc.append(np.vstack(input_output_arr[8::10]))
-    
-    return eeg_pp_action_speech_loc, np.vstack(input_output_arr[9::10])
-
-def generate_training_testing_val_dataset(data_df, seed, data_split_ratio=(0.6, 0.35, 0.05)):   
-    unique_team = data_df[['teamID', 'sessionID']].drop_duplicates().reset_index(drop=True)
+def select_model_input_and_output(data_df, role, is_test=False):
+    # Map role names to indices
     role_lst = ['yaw', 'pitch', 'thrust']
-    all_role_train_input = []
-    all_role_test_input = []
-    all_role_val_input = []    
-    all_role_train_output = []
-    all_role_test_output = []
-    all_role_val_output = []
-    all_team_sess_ring = []
+
+    # Define modalities and input columns excluding the specified role
+    modalities = {
+        'EEG': {'columns': [f'{r}EEG' for r in role_lst if r != role], 'slice': (0, 256)},
+        'Pupil': {'columns': [f'{r}Pupil' for r in role_lst if r != role], 'slice': (0, 60)},
+        'Action': {'columns': [f'{r}Action' for r in role_lst if r != role], 'slice': (0, 60)},
+        'Speech': {'columns': [f'{r}Speech' for r in role_lst if r != role], 'slice': (0, 60)},
+        'location': {'columns': ['location'], 'slice': None}  # No slicing needed for location
+    }
+ 
+    # Collect input data based on modality, excluding the specified role
+    input_data_lst = []
+    for modality, details in modalities.items():
+        for col in details['columns']:
+            data_slice = np.array(list(data_df[col]))
+            if details['slice']:  # Apply slicing if specified
+                if modality == 'EEG':
+                    data_slice = data_slice[:, :, details['slice'][0]:details['slice'][1]]
+                else:
+                    data_slice = data_slice[:, details['slice'][0]:details['slice'][1]]
+            input_data_lst.append(data_slice)
+
+    # Collect output data based on the specified role
+    output_data = np.array(list(data_df[f'{role}Action']))[:, 30:]
+    # import IPython
+    # IPython.embed()
+    # assert False
+    if not is_test:
+        return input_data_lst, output_data
+    else:
+        return input_data_lst, output_data, data_df[['teamID', 'sessionID', 'trialID', 'ringID', 'communication','difficulty']]
+def split_data(data_df, seed, data_split_ratio=(0.7, 0.25, 0.05), n_splits=4):   
+    role_lst = ['yaw', 'pitch', 'thrust']
+    shuffled_df = copy.deepcopy(data_df)
+    np.random.seed(seed)
+    shuffled_df = shuffled_df.sample(frac=1).reset_index(drop=True)  # Shuffle sessions
+
+    # Divide unique sessions into 4 distinct, non-overlapping test groups
+    group_size = len(data_df) // n_splits
+    test_groups = [shuffled_df.iloc[i*group_size: (i+1)*group_size] for i in range(n_splits)]
+
     for role in role_lst:
-        training_lst = []
-        testing_lst = []
-        validation_lst = []
-        test_team_sess_trial_ring_lst = []
-        for team_id in unique_team.iterrows():
-            temp_data_df = data_df[(data_df.teamID == team_id[1].teamID)&(data_df.sessionID == team_id[1].sessionID)]
-            shuffled_df = temp_data_df.sample(frac=1, random_state=seed)
-            train_end = int(len(shuffled_df)*data_split_ratio[0])
-            test_end = train_end+int(len(shuffled_df)*data_split_ratio[1])
-            val_len = len(shuffled_df)
-            temp_training_lst = select_model_input_and_output(shuffled_df, 0, train_end, role)
-            temp_testing_lst = select_model_input_and_output(shuffled_df, train_end, test_end, role)
-            temp_validation_lst = select_model_input_and_output(shuffled_df, test_end, val_len, role)
-            training_lst += temp_training_lst
-            testing_lst += temp_testing_lst
-            validation_lst += temp_validation_lst
-            test_team_sess_trial_ring_lst.append(shuffled_df[['teamID', 'sessionID', 'trialID', 'ringID']].iloc[train_end:test_end])
-  
-        test_team_sess_trial_ring_df = pd.concat(test_team_sess_trial_ring_lst)
+        train_lst, test_lst, val_lst, test_team_sess_trial_ring_lst = [], [], [], []
+        for split_round in range(n_splits):
+            # Define the test, validation, and training groups for this split
+            test_sessions = test_groups[split_round]
+            # Define the remaining data as the training + validation pool (75% of the data)
 
-        training_arr_input, training_arr_output = reformat_input_output_data(training_lst)
-        testing_arr_input, testing_arr_output = reformat_input_output_data(testing_lst)
-        validation_arr_input, validation_arr_output = reformat_input_output_data(validation_lst)
-        all_role_train_input.append(training_arr_input)
-        all_role_test_input.append(testing_arr_input)
-        all_role_val_input.append(validation_arr_input)   
-        all_role_train_output.append(training_arr_output)
-        all_role_test_output.append(testing_arr_output)
-        all_role_val_output.append(validation_arr_output)
-        all_team_sess_ring.append(test_team_sess_trial_ring_df)
+            remaining_sessions = pd.concat([test_groups[i] for i in range(n_splits) if i != split_round])
 
-    mkdir(os.path.join(f'seed_{seed}', 'train'))
-    mkdir(os.path.join(f'seed_{seed}', 'test'))
-    mkdir(os.path.join(f'seed_{seed}', 'validation'))
+
+            # Split the remaining 75% into training (70%) and validation (5%)
+            train_sessions, val_sessions = train_test_split(
+                remaining_sessions, 
+                test_size=data_split_ratio[2] / (data_split_ratio[0] + data_split_ratio[2]), 
+                random_state=seed + split_round
+            )
+
+            # Collect data for each set
+            train_in, train_out = select_model_input_and_output(train_sessions, role)
+            save_data(train_in, train_out, role, split_round, 'train')
+
+            test_in, test_out, test_sessions_info = select_model_input_and_output(test_sessions, role, is_test=True)
+            save_data(test_in, test_out, role, split_round, 'test', test_sessions_info)
+
+
+            val_in, val_out = select_model_input_and_output(val_sessions, role)
+            save_data(val_in, val_out, role, split_round, 'validation')
+
+            # Save the datasets
+
+def save_data(input_lst, output_lst, role, split_round, ttv, test_sessions_info=None):
+    base_path = os.path.join(role, f'split_{split_round}')
+    mkdir(os.path.join(base_path, ttv))
+
     for i, modality in enumerate(['EEG', 'Pupil', 'Action', 'Speech', 'location']):
-        np.save(os.path.join(f'seed_{seed}', 'train', f'train_{modality.lower()}.npy'), np.concatenate([all_role_train_input[0][i], all_role_train_input[1][i], all_role_train_input[2][i]]))
-        np.save(os.path.join(f'seed_{seed}', 'test', f'test_{modality.lower()}.npy'), np.concatenate([all_role_test_input[0][i], all_role_test_input[1][i], all_role_test_input[2][i]]))
-        np.save(os.path.join(f'seed_{seed}', 'validation', f'validation_{modality.lower()}.npy'), np.concatenate([all_role_val_input[0][i], all_role_val_input[1][i], all_role_val_input[2][i]]))
+        np.save(os.path.join(base_path, ttv, f'train_{modality.lower()}.npy'), input_lst[i])
 
-    np.save(os.path.join(f'seed_{seed}', 'train', 'train_output.npy'), np.concatenate([all_role_train_output[0], all_role_train_output[1], all_role_train_output[2]]))
-    np.save(os.path.join(f'seed_{seed}', 'test', 'test_output.npy'), np.concatenate([all_role_test_output[0], all_role_test_output[1], all_role_test_output[2]]))
-    np.save(os.path.join(f'seed_{seed}', 'validation', 'validation_output.npy'), np.concatenate([all_role_val_output[0], all_role_val_output[1], all_role_val_output[2]]))
-    np.save(os.path.join(f'seed_{seed}', 'test', 'data_info.npy'), pd.concat(all_team_sess_ring).reset_index(drop=True))
+    np.save(os.path.join(base_path, ttv, 'train_output.npy'), output_lst)
+    if ttv == 'test':
+        np.save(os.path.join(base_path, 'test', 'test_session_info.npy'), test_sessions_info)
+
 
 if __name__ == '__main__':
     path = '../../data'
-    for seed in [1,2,3]:
-        pd.set_option('display.max_columns', None)
-        action_df, location_df, pupil_df, eeg_df, speech_df, ring_df, performance_df = read_data(path)
-        transformer_data_df = transformer_data_generator(action_df, location_df, pupil_df, eeg_df, speech_df, ring_df, performance_df)   
-        generate_training_testing_val_dataset(transformer_data_df, seed)
-        
+    seed = 1
+    pd.set_option('display.max_columns', None)
+    action_df, location_df, pupil_df, eeg_df, speech_df, ring_df, performance_df = read_data(path)
+    transformer_data_df = transformer_data_generator(action_df, location_df, pupil_df, eeg_df, speech_df, ring_df, performance_df)   
+    # transformer_data_df.to_pickle('temp.pkl')
+    # transformer_data_df = pd.read_pickle('temp.pkl')
+    split_data(transformer_data_df, seed)
+    
 
 
 

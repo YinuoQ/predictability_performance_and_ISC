@@ -6,13 +6,13 @@ from tqdm import tqdm
 from timeit import default_timer
 import matplotlib.pyplot as plt
 from scipy import linalg as sp_linalg
-from scipy import diag as sp_diag
+from scipy.sparse import diags
 
 def regInv(R, k):
     '''PCA regularized inverse of square symmetric positive definite matrix R.'''
 
     U, S, Vh = np.linalg.svd(R)
-    invR = U[:, :k].dot(sp_diag(1 / S[:k])).dot(Vh[:k, :])
+    invR = U[:, :k].dot(diags(1 / S[:k]).toarray()).dot(Vh[:k, :])
     return invR
 def ISC_eeg(data):
     gamma = 0.1# shrinkage parameter; smaller gamma for less regularization
@@ -48,6 +48,7 @@ def ISC_eeg(data):
         invR = regInv(Rw, k)
         ISC, W = sp_linalg.eig(invR.dot(Rb))
         ISC, W = ISC[:k], W[:, :k]
+
 
     else:
         Rw_reg = (1-gamma) * Rw + gamma * Rw.diagonal().mean() * np.identity(D)

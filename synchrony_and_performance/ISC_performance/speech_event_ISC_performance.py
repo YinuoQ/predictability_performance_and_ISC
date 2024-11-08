@@ -32,18 +32,21 @@ def get_speech_performance(lcoation_df, speech_event):
     return speech_performance_df
 
 def ISC_among_speech(speech_event):
-    cov_mat = np.abs(np.corrcoef(np.array([speech_event.yawSpeech, 
-                                       speech_event.pitchSpeech, 
-                                       speech_event.thrustSpeech])))
-    r_xy = cov_mat[0,1]
-    r_xz = cov_mat[0,2]
-    r_yz = cov_mat[1,2]
+    if np.sum(np.array([speech_event.yawSpeech, speech_event.pitchSpeech, speech_event.thrustSpeech])) == 0:
+        return 0
+    else:
+        cov_mat = np.abs(np.corrcoef(np.array([speech_event.yawSpeech, 
+                                           speech_event.pitchSpeech, 
+                                           speech_event.thrustSpeech])))
+        r_xy = cov_mat[0,1]
+        r_xz = cov_mat[0,2]
+        r_yz = cov_mat[1,2]
 
-    z_xy = np.arctanh(r_xy)
-    z_xz = np.arctanh(r_xz)
-    z_yz = np.arctanh(r_yz)
-    team_corr_coeff = np.tanh(np.nanmean([z_xy, z_xz, z_yz]))
-    return team_corr_coeff
+        z_xy = np.arctanh(r_xy)
+        z_xz = np.arctanh(r_xz)
+        z_yz = np.arctanh(r_yz)
+        team_corr_coeff = np.tanh(np.nanmean([z_xy, z_xz, z_yz]))
+        return team_corr_coeff
 
 def compute_speech_ISC(speech_performance_df):
     speech_ISC = copy.deepcopy(speech_performance_df)
@@ -92,7 +95,7 @@ if __name__ == '__main__':
     pd.set_option('display.max_columns', None)
     lcoation_df = pd.read_pickle(os.path.join(path, 'epoched_raw_location.pkl'))
     speech_event = pd.read_pickle(os.path.join(path, 'epoched_speech_event.pkl'))
-   
+    
     # epoch based performances
     speech_performance_df = get_speech_performance(lcoation_df, speech_event)
     speech_ISC_df = compute_speech_ISC(speech_performance_df)
