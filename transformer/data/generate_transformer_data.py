@@ -71,6 +71,7 @@ def select_model_input_and_output(data_df, role, is_test=False):
     # Collect input data based on modality, excluding the specified role
     input_data_lst = []
     for modality, details in modalities.items():
+        two_subj_lst = []
         for col in details['columns']:
             data_slice = np.array(list(data_df[col]))
             if details['slice']:  # Apply slicing if specified
@@ -78,13 +79,19 @@ def select_model_input_and_output(data_df, role, is_test=False):
                     data_slice = data_slice[:, :, details['slice'][0]:details['slice'][1]]
                 else:
                     data_slice = data_slice[:, details['slice'][0]:details['slice'][1]]
-            input_data_lst.append(data_slice)
+            two_subj_lst.append(data_slice)
+        if len(two_subj_lst) > 1 and modality == 'EEG':
+            input_data_lst.append(np.transpose(two_subj_lst, (1, 0, 2, 3)))
+        elif len(two_subj_lst) > 1:
+            input_data_lst.append(np.transpose(two_subj_lst, (1, 0, 2)))
+
+        else:
+            input_data_lst.append(two_subj_lst[0])
+        
 
     # Collect output data based on the specified role
     output_data = np.array(list(data_df[f'{role}Action']))[:, 30:]
-    # import IPython
-    # IPython.embed()
-    # assert False
+
     if not is_test:
         return input_data_lst, output_data
     else:
@@ -134,7 +141,7 @@ def save_data(input_lst, output_lst, role, split_round, ttv, test_sessions_info=
     mkdir(os.path.join(base_path, ttv))
 
     for i, modality in enumerate(['EEG', 'Pupil', 'Action', 'Speech', 'location']):
-        np.save(os.path.join(base_path, ttv, f'train_{modality.lower()}.npy'), input_lst[i])
+        np.save(os.path.join(base_path, ttv, f'{ttv}_{modality.lower()}.npy'), input_lst[i])
 
     np.save(os.path.join(base_path, ttv, 'train_output.npy'), output_lst)
     if ttv == 'test':
@@ -147,8 +154,7 @@ if __name__ == '__main__':
     pd.set_option('display.max_columns', None)
     action_df, location_df, pupil_df, eeg_df, speech_df, ring_df, performance_df = read_data(path)
     transformer_data_df = transformer_data_generator(action_df, location_df, pupil_df, eeg_df, speech_df, ring_df, performance_df)   
-    # transformer_data_df.to_pickle('temp.pkl')
-    # transformer_data_df = pd.read_pickle('temp.pkl')
+
     split_data(transformer_data_df, seed)
     
 
