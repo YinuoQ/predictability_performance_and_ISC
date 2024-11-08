@@ -40,12 +40,18 @@ class ActionPredictionModel(pl.LightningModule):
         self.model = CrossModalTransformer()
         # loss
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        class_weights = torch.tensor([15.0, 1.0, 10.0]).to(device)
+        # if self.hparams.log_dir.split('_')[-1] == 'thrust':
+        #     class_weights = torch.tensor([4.4, 1.5, 8.7]).to(device) # Thrust
+        # if self.hparams.log_dir.split('_')[-1] == 'pitch':
+        #     class_weights = torch.tensor([20.7, 1.5, 24.9]).to(device) # Pitch
+        # if self.hparams.log_dir.split('_')[-1] == 'yaw':
+        #     class_weights = torch.tensor([23.2, 1.5,21.1]).to(device) # Yaw
+        class_weights = torch.tensor([10.7, 1.2,11.5]).to(device)
         self.loss_func = nn.CrossEntropyLoss(reduction='none', weight=class_weights)
  
 
     def correlation_accuracy(self, prediction, target):
-        prediction = torch.argmax(prediction, dim=1)
+        prediction = torch.argmax(torch.softmax(prediction, dim=1), dim=1)
         output = torch.sum(prediction == target) / (prediction.shape[0] * prediction.shape[1])
 
         return output

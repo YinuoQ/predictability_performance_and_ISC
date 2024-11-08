@@ -17,31 +17,43 @@ def get_performance(lcoation_df):
 
 def compute_predictability(target_prediction_df):
     predictability_lst = []
-    target = np.array(list(target_prediction_df.target)).flatten()
-    prediction = np.array(list(target_prediction_df.prediction)).flatten()
-    return np.sum(target != prediction) / 90
+    target = np.array(list(target_prediction_df.target))
+    prediction = np.array(list(target_prediction_df.prediction))
+    for i in range(3):
+        if sum(target[i] == prediction[i]) == 30:
+            predictability_lst.append(1)
+        elif np.sum(target[i] == target[i,0]) == 30 or np.sum(prediction[i] == prediction[i,0]) == 30:
+            predictability_lst.append(0)
+        else:
+            predictability_lst.append(np.abs(np.corrcoef(target[i], prediction[i])[0,1]))
+    return np.nanmean(predictability_lst)
+    # return np.sum(target.flatten() == prediction.flatten()) / 90
 
 
 def get_predictability(seed):
-    prediction_target_arr = np.load(f'../../transformer/log/lightning_logs/version_{seed-1}/pred_target.npy')
-    target_info = np.load(f'../../transformer/data/seed_{seed}/test/data_info.npy',  allow_pickle=True)
-    target_info_df = pd.DataFrame(target_info)
-    unique_role_len = int(len(target_info_df)/3)
-    target_info_df = target_info_df.rename(columns={0: 'teamID', 1: 'sessionID', 2: 'trialID', 3: 'ringID'})
-    predictability_df = copy.deepcopy(target_info_df)[:unique_role_len]
-    target_info_df['target'] = list(prediction_target_arr[1].reshape(-1, 30))
-    target_info_df['prediction'] = list(prediction_target_arr[0].reshape(-1, 30))
-    target_info_df['role'] = ['Yaw'] * unique_role_len + ['Pitch'] * unique_role_len + ['Thrust'] * unique_role_len
-    for i in tqdm(range(unique_role_len)):
-        temp_tstr = predictability_df.iloc[i]
-        three_role_df = target_info_df.loc[(target_info_df.teamID == temp_tstr.teamID) & 
-                                           (target_info_df.sessionID == temp_tstr.sessionID)& 
-                                           (target_info_df.trialID == temp_tstr.trialID)& 
-                                           (target_info_df.ringID == temp_tstr.ringID)]
-        temp_team_predictability = compute_predictability(three_role_df)
+    three_role_df = pd.DataFrame()
+    for i, role in enumerate(['yaw', 'pitch', 'thrust']):
+        prediction_target_arr = np.load(f'../../transformer/log_{role}/lightning_logs/version_{seed-1}/pred_target.npy')
+        target_info = np.load(f'../../transformer/data/{role}/seed_{seed}/test/data_info.npy',  allow_pickle=True)
+        target_info_df = pd.DataFrame(target_info)
+        target_info_df = target_info_df.rename(columns={0: 'teamID', 1: 'sessionID', 2: 'trialID', 3: 'ringID'})
+        if role == 'yaw':
+                predictability_df = copy.deepcopy(target_info_df)
+        target_info_df['target'] = list(prediction_target_arr[1].reshape(-1, 30))
+        target_info_df['prediction'] = list(prediction_target_arr[0].reshape(-1, 30))
+        target_info_df['role'] = role
+        three_role_df = pd.concat((three_role_df, target_info_df))
+    three_role_df = three_role_df.reset_index(drop=True)
+    for i in tqdm(range(len(three_role_df)//3)):
+        temp_tstr = target_info_df.iloc[i]
+        temp_three_role = three_role_df.loc[(three_role_df.teamID == temp_tstr.teamID) & 
+                                        (three_role_df.sessionID == temp_tstr.sessionID)& 
+                                        (three_role_df.trialID == temp_tstr.trialID)& 
+                                        (three_role_df.ringID == temp_tstr.ringID)]
+        temp_team_predictability = compute_predictability(temp_three_role)
         if not np.isnan(temp_team_predictability):
             predictability_df.at[i, 'predictability'] = temp_team_predictability
-    return predictability_df, prediction_target_arr
+    return predictability_df
 
 def mixed_effects_model(predictability_performance_df):
     model_formula = "performance ~ predictability"
@@ -96,49 +108,28 @@ def get_trial_performance(lcoation_df, predictability_df):
     a = performance_df.dropna().reset_index(drop=True)
     a.predictability = pd.to_numeric(a.predictability)
     model_formula = "performance ~ predictability"
-    model = smf.mixedlm(model_formula, a, groups=a['teamID'], re_formula='1+sessionID')
+    model = smf.mixedlm(model_formula, a, groups=a['teamID'], re_formula='1 + sessionID')
     model_result = model.fit()
     print(model_result.summary())
 
-def plot_prediction_results(target_arr):
-    import IPython
-    IPython.embed()
-    assert False
-    reshaped_tar = target_arr.reshape((3,2,30,-1))
-    for i in range(10):
-        plt.plot(reshaped_tar[0,0,:,i])
-        plt.plot(reshaped_tar[0,1,:,i], '--')
-        plt.show()
 
 if __name__ == '__main__':
     path = '../../data'
     pd.set_option('display.max_columns', None)
-    lcoation_df = pd.read_pickle(os.path.join(path, 'epoched_raw_location.pkl'))
-    warnings.filterwarnings('ignore')
+    # lcoation_df = pd.read_pickle(os.path.join(path, 'epoched_raw_location.pkl'))
+    lcoation_df = pd.read_pickle('epoched_raw_location.pkl')
+    # warnings.filterwarnings('ignore')
     # epoch based performances
     performance_df = get_performance(lcoation_df)
     predictability_df = pd.DataFrame()
-    target_lst = []
     for seed in [1,2,3]:
-        temp_pred, temp_target = get_predictability(seed)
-        predictability_df = pd.concat((predictability_df, temp_pred))
-        target_lst.append(temp_target)
+        predictability_df = pd.concat((predictability_df, get_predictability(seed)))
     predictability_df = predictability_df.reset_index(drop=True)
-    
-    plot_prediction_results(np.stack(target_lst))
     pred_perf_df = get_predictability_and_performance(performance_df, predictability_df)
+
     mixed_effects_model(pred_perf_df)
 
     # trial based performances
     trial_based_performance = get_trial_performance(lcoation_df, predictability_df)
 
 
-
-
-
-
-
-
-
-
-   
