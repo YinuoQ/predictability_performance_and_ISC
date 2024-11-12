@@ -10,7 +10,6 @@ import torch.nn.functional as F
 from torchvision import transforms
 import torchvision.models as models
 from collections import OrderedDict
-from torchmetrics import classification
 from torch.utils.data import DataLoader
 from dataset import PredictAction
 from model_utils import CrossModalTransformer
@@ -40,13 +39,8 @@ class ActionPredictionModel(pl.LightningModule):
         self.model = CrossModalTransformer()
         # loss
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        # if self.hparams.log_dir.split('_')[-1] == 'thrust':
-        #     class_weights = torch.tensor([4.4, 1.5, 8.7]).to(device) # Thrust
-        # if self.hparams.log_dir.split('_')[-1] == 'pitch':
-        #     class_weights = torch.tensor([20.7, 1.5, 24.9]).to(device) # Pitch
-        # if self.hparams.log_dir.split('_')[-1] == 'yaw':
-        #     class_weights = torch.tensor([23.2, 1.5,21.1]).to(device) # Yaw
-        class_weights = torch.tensor([10.7, 1.2,11.5]).to(device)
+
+        class_weights = torch.tensor([15.0, 1.0,15.0]).to(device)
         self.loss_func = nn.CrossEntropyLoss(reduction='none', weight=class_weights)
  
 
@@ -101,7 +95,7 @@ class ActionPredictionModel(pl.LightningModule):
     
     def configure_optimizers(self):
 
-        optimizer = torch.optim.Adam(self.parameters(), lr=self.hparams.lr)
+        optimizer = torch.optim.AdamW(self.parameters(), lr=self.hparams.lr)
         scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=self.hparams.lr_schedule, gamma=self.hparams.gamma)
 
 

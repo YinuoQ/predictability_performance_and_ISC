@@ -49,7 +49,7 @@ class PredictAction(Dataset):
         speech = np.load(os.path.join((self.dataset_folder), f'{self.flag}', f'{self.flag}_speech.npy'), allow_pickle=True)
         action = np.load(os.path.join((self.dataset_folder), f'{self.flag}', f'{self.flag}_action.npy'), allow_pickle=True)
         location = np.load(os.path.join((self.dataset_folder), f'{self.flag}', f'{self.flag}_location.npy'), allow_pickle=True)
-        out_action = np.load(os.path.join((self.dataset_folder), f'{self.flag}', f'{self.flag}_output.npy'), allow_pickle=True)
+        out_action = np.load(os.path.join((self.dataset_folder), f'{self.flag}', f'train_output.npy'), allow_pickle=True)
 
         return eeg, pupil, speech, action, location, out_action
     

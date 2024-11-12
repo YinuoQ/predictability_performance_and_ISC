@@ -50,7 +50,7 @@ class PositionalEncoding(nn.Module):
 class CrossModalTransformer(nn.Module):
     def __init__(self, num_classes=3, time_steps=30):
         super(CrossModalTransformer, self).__init__()
-        self.num_heads = 8
+        self.num_heads = 4
         self.conv_output_dim = 64
         self.num_classes = num_classes
         self.time_steps = time_steps
@@ -96,26 +96,29 @@ class CrossModalTransformer(nn.Module):
         eeg = self.attention(eeg, eeg, eeg, need_weights=False)[0]
         eeg = self.norm(eeg)
 
+        
         pupil = self.attention(location, pupil, pupil, need_weights=False)[0]
         pupil = self.norm(pupil)
         pupil = self.attention(pupil, pupil, pupil, need_weights=False)[0]
         pupil = self.norm(pupil)
-    
+
 
         action = self.attention(location, action, action, need_weights=False)[0]
-        action = self.norm(action)
+        action = self.norm(action)    
         action = self.attention(action, action, action, need_weights=False)[0]
         action = self.norm(action)   
-  
+
 
         speech = self.attention(location, speech, speech, need_weights=False)[0]
         speech = self.norm(speech)
         speech = self.attention(speech, speech, speech, need_weights=False)[0]
-        speech = self.norm(speech)   
+        speech = self.norm(speech)  
+
 
         # Concatenate modalities
         concatenated = torch.cat([eeg, pupil, action, speech], dim=-2)
-        concatenated = self.feed_forward(concatenated)
+        concatenated = self.attention(concatenated, concatenated, concatenated, need_weights=False)[0]
+        # concatenated = self.feed_forward(concatenated)
         concatenated = self.relu(concatenated)
         concatenated = self.norm(concatenated)
 
@@ -123,7 +126,7 @@ class CrossModalTransformer(nn.Module):
     
     
     def decoder_layer(self, concatenated, tgt):
-   
+        
         tgt = self.tgt_conv(tgt.unsqueeze(1))
         tgt = self.tgt_pos_encoder(tgt)  # Apply positional encoding to the target
         tgt_mask = self.generate_subsequent_mask(tgt.size(1), tgt.size(1)).to(self.device)
@@ -134,6 +137,7 @@ class CrossModalTransformer(nn.Module):
         return tgt
 
     def forward(self, eeg, pupil, speech, action, location, tgt):
+
         # Apply adaptive convolution
         eeg = self.eeg_conv(eeg)
         pupil = self.pupil_speech_action_conv(pupil)

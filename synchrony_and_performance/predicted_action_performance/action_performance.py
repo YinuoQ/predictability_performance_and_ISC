@@ -30,11 +30,11 @@ def compute_predictability(target_prediction_df):
     # return np.sum(target.flatten() == prediction.flatten()) / 90
 
 
-def get_predictability(seed):
+def get_predictability(split):
     three_role_df = pd.DataFrame()
     for i, role in enumerate(['yaw', 'pitch', 'thrust']):
-        prediction_target_arr = np.load(f'../../transformer/log_{role}/lightning_logs/version_{seed-1}/pred_target.npy')
-        target_info = np.load(f'../../transformer/data/{role}/seed_{seed}/test/data_info.npy',  allow_pickle=True)
+        prediction_target_arr = np.load(f'../../transformer/scripts/log_{role}/lightning_logs/version_{split-1}/pred_target.npy')
+        target_info = np.load(f'../../transformer/data/{role}/split_{split-1}/test/test_session_info.npy',  allow_pickle=True)
         target_info_df = pd.DataFrame(target_info)
         target_info_df = target_info_df.rename(columns={0: 'teamID', 1: 'sessionID', 2: 'trialID', 3: 'ringID'})
         if role == 'yaw':
@@ -122,8 +122,11 @@ if __name__ == '__main__':
     # epoch based performances
     performance_df = get_performance(lcoation_df)
     predictability_df = pd.DataFrame()
-    for seed in [1,2,3]:
-        predictability_df = pd.concat((predictability_df, get_predictability(seed)))
+    for split in [1,2,3,4]:
+        predictability_df = pd.concat((predictability_df, get_predictability(split)))
+    # import IPython
+    # IPython.embed()
+    # assert False
     predictability_df = predictability_df.reset_index(drop=True)
     pred_perf_df = get_predictability_and_performance(performance_df, predictability_df)
 

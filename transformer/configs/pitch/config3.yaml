@@ -1,11 +1,13 @@
 data_filepath: ../data/pitch/split_3
 epochs: 20
-gamma: 0.8
+gamma: 0.5
 if_cuda: True
 log_dir: log_pitch
 lr: 0.00005
 lr_schedule:
+- 5
 - 10
+- 15
 num_gpus: 1
 num_workers: 8
 seed: 1
