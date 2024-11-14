@@ -6,9 +6,10 @@ import pprint
 from utils import common
 from munch import munchify
 from models import ActionPredictionModel
-from pytorch_lightning.plugins import DDPPlugin
+from pytorch_lightning.strategies import DDPStrategy
 from pytorch_lightning import Trainer, seed_everything
 from pytorch_lightning.callbacks import ModelCheckpoint
+from lightning.pytorch.loggers import TensorBoardLogger
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 
 # python train.py configs/config1.yaml
@@ -57,16 +58,16 @@ def main():
                                           monitor='val_loss',
                                           mode='min')
     
-    
+    logger = TensorBoardLogger(save_dir=log_dir)
     # define trainer
     trainer = Trainer(max_epochs=cfg.epochs,
                       default_root_dir=log_dir,
                       deterministic=True,
                       callbacks=checkpoint_callback,
-                      amp_backend='native',
                       accelerator="gpu",
                       devices=1,
-                      log_every_n_steps=10)
+                      log_every_n_steps=5,
+                      logger=logger)
 
     trainer.fit(model)
 

@@ -15,9 +15,8 @@ from scipy.spatial import distance
 from scipy.signal import correlate
 from collections import OrderedDict
 from models import ActionPredictionModel
-from torchmetrics.classification import MulticlassAUROC
-from pytorch_lightning.plugins import DDPPlugin
 from pytorch_lightning import Trainer, seed_everything
+from pytorch_lightning.strategies import DDPStrategy
 from pytorch_lightning.loggers import TensorBoardLogger
 
 

@@ -1,13 +1,14 @@
 data_filepath: ../data/yaw/split_3
-epochs: 20
+epochs: 100
 gamma: 0.5
 if_cuda: True
 log_dir: log_yaw
-lr: 0.00005
+lr: 0.000001
 lr_schedule:
-- 5
-- 10
-- 15
+- 20
+- 40
+- 60
+- 80
 num_gpus: 1
 num_workers: 8
 seed: 1

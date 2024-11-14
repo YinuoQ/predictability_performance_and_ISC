@@ -38,7 +38,7 @@ class PositionalEncoding(nn.Module):
         super(PositionalEncoding, self).__init__()
         pe = torch.zeros(max_len, d_model)
         position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
-        div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-torch.log(torch.tensor(10000.0)) / d_model))
+        div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-torch.log(torch.tensor(5000.0)) / d_model))
         pe[:, 0::2] = torch.sin(position * div_term)
         pe[:, 1::2] = torch.cos(position * div_term)
         pe = pe.unsqueeze(0)
@@ -50,7 +50,7 @@ class PositionalEncoding(nn.Module):
 class CrossModalTransformer(nn.Module):
     def __init__(self, num_classes=3, time_steps=30):
         super(CrossModalTransformer, self).__init__()
-        self.num_heads = 4
+        self.num_heads = 8
         self.conv_output_dim = 64
         self.num_classes = num_classes
         self.time_steps = time_steps
@@ -71,12 +71,13 @@ class CrossModalTransformer(nn.Module):
 
         # normalization
         self.norm = nn.LayerNorm(self.conv_output_dim)
+        self.norm_cat = nn.LayerNorm(self.conv_output_dim*4)
 
         # Cross-modal attention layers (self-attention for query/value and cross-attention for key)
         self.attention = nn.MultiheadAttention(self.conv_output_dim, self.num_heads, batch_first=True)
 
         # feed-forward for each cross-attention
-        self.feed_forward = nn.Linear(in_features=self.conv_output_dim, out_features=self.conv_output_dim)
+        self.feed_forward = nn.Linear(in_features=self.conv_output_dim*4, out_features=self.conv_output_dim)
         # concat        
         self.concat_multi_modal = nn.Linear(in_features=self.conv_output_dim, out_features=self.conv_output_dim)
 
@@ -116,10 +117,10 @@ class CrossModalTransformer(nn.Module):
 
 
         # Concatenate modalities
-        concatenated = torch.cat([eeg, pupil, action, speech], dim=-2)
-        concatenated = self.attention(concatenated, concatenated, concatenated, need_weights=False)[0]
-        # concatenated = self.feed_forward(concatenated)
-        concatenated = self.relu(concatenated)
+        concatenated = torch.cat([eeg, pupil, action, speech], dim=-1)
+        concatenated = self.norm_cat(concatenated)
+        concatenated = self.feed_forward(concatenated)
+        # concatenated = self.relu(concatenated)
         concatenated = self.norm(concatenated)
 
         return concatenated

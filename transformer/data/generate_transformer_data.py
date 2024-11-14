@@ -122,7 +122,7 @@ def split_data(data_df, seed, data_split_ratio=(0.7, 0.25, 0.05), n_splits=4):
                 test_size=data_split_ratio[2] / (data_split_ratio[0] + data_split_ratio[2]), 
                 random_state=seed + split_round
             )
-
+            
             # Collect data for each set
             train_in, train_out = select_model_input_and_output(train_sessions, role)
             save_data(train_in, train_out, role, split_round, 'train')
@@ -143,7 +143,7 @@ def save_data(input_lst, output_lst, role, split_round, ttv, test_sessions_info=
     for i, modality in enumerate(['EEG', 'Pupil', 'Action', 'Speech', 'location']):
         np.save(os.path.join(base_path, ttv, f'{ttv}_{modality.lower()}.npy'), input_lst[i])
 
-    np.save(os.path.join(base_path, ttv, 'train_output.npy'), output_lst)
+    np.save(os.path.join(base_path, ttv, f'{ttv}_output.npy'), output_lst)
     if ttv == 'test':
         np.save(os.path.join(base_path, 'test', 'test_session_info.npy'), test_sessions_info)
 
