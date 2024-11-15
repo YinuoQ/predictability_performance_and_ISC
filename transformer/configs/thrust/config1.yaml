@@ -1,9 +1,9 @@
 data_filepath: ../data/thrust/split_1
 epochs: 100
-gamma: 0.5
+gamma: 0.2
 if_cuda: True
 log_dir: log_thrust
-lr: 0.00005
+lr: 0.00001
 lr_schedule:
 - 20
 - 40

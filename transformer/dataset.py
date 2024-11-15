@@ -80,6 +80,6 @@ class PredictAction(Dataset):
         src5 = sequence5
 
         tgt = output_seq[:self.target_seq_len]
-        trg_y = output_seq[self.target_seq_len:]
+        trg_y = output_seq[self.target_seq_len-1:-1]
         # We only want trg_y to consist of the target variable not any potential exogenous variables
         return src1, src2, src3, src4, src5, tgt+1, (trg_y+1).long()
