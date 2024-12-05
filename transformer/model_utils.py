@@ -71,16 +71,14 @@ class CrossModalTransformer(nn.Module):
 
         # normalization
         self.norm = nn.LayerNorm(self.conv_output_dim)
-        self.norm_cat = nn.LayerNorm(self.conv_output_dim*4)
+        self.norm_cat = nn.LayerNorm(self.conv_output_dim*3)
 
         # Cross-modal attention layers (self-attention for query/value and cross-attention for key)
         self.attention = nn.MultiheadAttention(self.conv_output_dim, self.num_heads, batch_first=True)
 
         # feed-forward for each cross-attention
-        self.feed_forward = nn.Linear(in_features=self.conv_output_dim*4, out_features=self.conv_output_dim)
-        # concat        
-        self.concat_multi_modal = nn.Linear(in_features=self.conv_output_dim, out_features=self.conv_output_dim)
-
+        self.feed_forward = nn.Linear(in_features=self.conv_output_dim*3, out_features=self.conv_output_dim)
+        
         # Final layers
         self.fc1 = nn.Linear(in_features=2048, out_features=90)
 
@@ -110,14 +108,14 @@ class CrossModalTransformer(nn.Module):
         action = self.norm(action)   
 
 
-        speech = self.attention(location, speech, speech, need_weights=False)[0]
-        speech = self.norm(speech)
-        speech = self.attention(speech, speech, speech, need_weights=False)[0]
-        speech = self.norm(speech)  
+        # speech = self.attention(location, speech, speech, need_weights=False)[0]
+        # speech = self.norm(speech)
+        # speech = self.attention(speech, speech, speech, need_weights=False)[0]
+        # speech = self.norm(speech)  
 
 
         # Concatenate modalities
-        concatenated = torch.cat([eeg, pupil, action, speech], dim=-1)
+        concatenated = torch.cat([eeg, pupil, action], dim=-1)#, speech
         concatenated = self.norm_cat(concatenated)
         concatenated = self.feed_forward(concatenated)
         # concatenated = self.relu(concatenated)
@@ -144,14 +142,14 @@ class CrossModalTransformer(nn.Module):
         pupil = self.pupil_speech_action_conv(pupil)
         action = self.pupil_speech_action_conv(action)
         location = self.location_conv(location)
-        speech = self.pupil_speech_action_conv(speech)
+        # speech = self.pupil_speech_action_conv(speech)
 
         # Apply positional encoding
         eeg = self.pos_encoder(eeg)
         pupil = self.pos_encoder(pupil)
         action = self.pos_encoder(action)
         location = self.pos_encoder(location)
-        speech = self.pos_encoder(speech)
+        # speech = self.pos_encoder(speech)
 
 
         concatenated = self.encoder_layer(eeg, pupil, action, location, speech)
