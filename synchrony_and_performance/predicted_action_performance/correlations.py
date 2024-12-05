@@ -140,8 +140,8 @@ if __name__ == '__main__':
     path = '../../data'
     pd.set_option('display.max_columns', None)
     predictability_df = pd.DataFrame()
-    for seed in [1,2,3]:
-        temp_pred, _ = get_predictability(seed)
+    for seed in [1,2,3, 4]:
+        temp_pred= get_predictability(seed)
         predictability_df = pd.concat((predictability_df, temp_pred))
     predictability_df = predictability_df.reset_index(drop=True)
     helpfulness_df, familiarity_df, pupil_df, eeg_df, action_df, local_performance_df, global_performance_df= get_ISC_and_reatings(path)

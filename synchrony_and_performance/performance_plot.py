@@ -4,6 +4,7 @@ import copy
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
+import scipy.stats as stats
 import matplotlib.pyplot as plt
 from statsmodels.stats.anova import AnovaRM 
 sys.path.insert(1, 'preprocessing/')
@@ -32,13 +33,12 @@ def plot_team_total_performance(performance_df):
     print(team_y)
 
     # repeated t-test
-    # import IPython
-    # IPython.embed()
-    # assert False
+
     y_df = y.reset_index(name='performance')
     y_df = y_df[y_df.teamID != 'T7'].reset_index(drop=True)
     results = print(AnovaRM(data=y_df, depvar='performance', 
               subject='teamID', within=['sessionID']).fit())
+
 
     plt.savefig('../plots/performance_session.png', dpi=300)
 
@@ -62,7 +62,9 @@ def plot_team_global_performance(performance_df):
     y_df = y_df[y_df.teamID != 'T7'].reset_index(drop=True)
     results = print(AnovaRM(data=y_df, depvar='performance', 
               subject='teamID', within=['sessionID']).fit())
-
+    # import IPython
+    # IPython.embed()
+    # assert False
     plt.savefig('../plots/performance_global.png', dpi=300)
 
 def plot_team_local_performance(performance_df):
