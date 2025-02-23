@@ -92,7 +92,7 @@ if __name__ == '__main__':
     path = '../../data'
     lcoation_df = pd.read_pickle(os.path.join(path, 'epoched_raw_location.pkl'))
     action_df = pd.read_pickle(os.path.join(path, 'epoched_action.pkl'))
-    
+   
     pd.set_option('display.max_columns', None)
     # epoched based performance
     action_performance_df = get_action_performance(lcoation_df, action_df)

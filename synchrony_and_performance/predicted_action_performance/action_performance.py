@@ -27,13 +27,12 @@ def compute_predictability(target_prediction_df):
         else:
             predictability_lst.append(np.abs(np.corrcoef(target[i], prediction[i])[0,1]))
     return np.nanmean(predictability_lst)
-    # return np.sum(target.flatten() == prediction.flatten()) / 90
 
 
 def get_predictability(split):
     three_role_df = pd.DataFrame()
     for i, role in enumerate(['yaw', 'pitch', 'thrust']):
-        prediction_target_arr = np.load(f'../../transformer/scripts/log_{role}/lightning_logs/version_{split-1}/pred_target.npy')
+        prediction_target_arr = np.load(f'../../transformer/scripts/without_speech/log_{role}/lightning_logs/version_{split-1}/pred_target.npy')
         target_info = np.load(f'../../transformer/data/{role}/split_{split-1}/test/test_session_info.npy',  allow_pickle=True)
         target_info_df = pd.DataFrame(target_info)
         target_info_df = target_info_df.rename(columns={0: 'teamID', 1: 'sessionID', 2: 'trialID', 3: 'ringID'})
@@ -115,7 +114,7 @@ def get_trial_performance(lcoation_df, predictability_df):
 def get_target_pred(split):
     three_role_df = pd.DataFrame()
     for i, role in enumerate(['yaw', 'pitch', 'thrust']):
-        prediction_target_arr = np.load(f'../../transformer/scripts/log_{role}/lightning_logs/version_{split-1}/pred_target.npy')
+        prediction_target_arr = np.load(f'../../transformer/scripts/with_speech/log_{role}/lightning_logs/version_{split-1}/pred_target.npy')
         target_info = np.load(f'../../transformer/data/{role}/split_{split-1}/test/test_session_info.npy',  allow_pickle=True)
         target_info_df = pd.DataFrame(target_info)
         target_info_df = target_info_df.rename(columns={0: 'teamID', 1: 'sessionID', 2: 'trialID', 3: 'ringID'})
@@ -131,9 +130,6 @@ def get_target_pred(split):
 
 
 def plot_prediction_target(predictability_df):
-    import IPython
-    IPython.embed()
-    assert False
     unique_tstr = predictability_df[['teamID', 'sessionID', 'trialID', 'ringID']].drop_duplicates().reset_index(drop=True)
     for tstr in tqdm(unique_tstr.values):
         temp_three_results = predictability_df.loc[(predictability_df.teamID == tstr[0])
@@ -162,19 +158,20 @@ if __name__ == '__main__':
     pd.set_option('display.max_columns', None)
     lcoation_df = pd.read_pickle(os.path.join(path, 'epoched_raw_location.pkl'))
     # epoch based performances
-    # performance_df = get_performance(lcoation_df)
-    # predictability_df = pd.DataFrame()
-    # for split in [1,2,3,4]:
-    #     predictability_df = pd.concat((predictability_df, get_predictability(split)))
-    # predictability_df = predictability_df.reset_index(drop=True)
-    # pred_perf_df = get_predictability_and_performance(performance_df, predictability_df)
-
-    # mixed_effects_model(pred_perf_df)
-
+    performance_df = get_performance(lcoation_df)
     predictability_df = pd.DataFrame()
     for split in [1,2,3,4]:
-        predictability_df = pd.concat((predictability_df, get_target_pred(split)))
-    plot_prediction_target(predictability_df)
+        predictability_df = pd.concat((predictability_df, get_predictability(split)))
+    predictability_df = predictability_df.reset_index(drop=True)
+    pred_perf_df = get_predictability_and_performance(performance_df, predictability_df)
+
+    trial_based_performance = get_trial_performance(lcoation_df, predictability_df)
+
+    # # to plot a few examples of the target and predicted actions
+    # predictability_df = pd.DataFrame()
+    # for split in [1,2,3,4]:
+    #     predictability_df = pd.concat((predictability_df, get_target_pred(split)))
+    # plot_prediction_target(predictability_df)
 
 
 

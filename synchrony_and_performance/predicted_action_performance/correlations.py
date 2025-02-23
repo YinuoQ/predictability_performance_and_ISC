@@ -129,12 +129,6 @@ def familiarity_2_predictability(familiarity_df, predictability_df):
     model_result = model.fit()
     print(model_result.summary())
 
-    import IPython
-    IPython.embed()
-    assert False
-
-
-
 
 if __name__ == '__main__':
     path = '../../data'
