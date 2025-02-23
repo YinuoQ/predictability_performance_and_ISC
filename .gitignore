@@ -52,8 +52,6 @@ data
 !transformer/data
 figures
 plots
-submission
-submission/*
 *.key
 
 transformer/data/*
@@ -63,3 +61,7 @@ transformer/scripts/*
 
 *.pkl
 synchrony_and_performance/predicted_action_performance/epoched_raw_location.pkl
+
+
+submission
+submission/*/*
