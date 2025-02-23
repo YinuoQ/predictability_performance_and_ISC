@@ -50,6 +50,11 @@ log_**
 
 data
 !transformer/data
+figures
+plots
+submission
+submission/*
+*.key
 
 transformer/data/*
 !transformer/data/*.py
