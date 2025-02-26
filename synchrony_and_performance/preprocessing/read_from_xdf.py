@@ -487,9 +487,6 @@ def match_ring_passed_to_trials(start_idx, end_idx, temp_ring_epochs, locationX,
 
 
 def trial_location(raw_location, ring_comm_diff_df):
-    # import IPython
-    # IPython.embed()
-    # assert False
     trialed_location = copy.deepcopy(ring_comm_diff_df)
     trialed_location = trialed_location.drop(columns={'ringID', 'difficulty', 'ringX', 'ringY', 'ringZ'}).drop_duplicates().reset_index(drop=True)
     trialed_location['yawLocation'] = None
@@ -577,6 +574,7 @@ def epoch_location_df(location_df, ring_comm_diff_df):
         if ring_idx - 90 > 0 and ring_idx + 90 <= len(team_loc.location[0]):
             ring_comm_diff_df.at[i, 'location'] = team_loc.location[:, ring_idx-90:ring_idx+90]
             ring_comm_diff_df.at[i, 'time'] = team_loc.time[ring_idx-90:ring_idx+90]
+
         else:
             # ignore this ring and continue
             continue
@@ -657,11 +655,11 @@ if __name__ == '__main__':
     # raw_audio.to_pickle(os.path.join(path, '../', 'raw_audio.pkl' ))
     # raw_pupilsize.to_pickle(os.path.join(path, '../', 'raw_pupilsize.pkl' ))
     # raw_openness.to_pickle(os.path.join(path, '../', 'raw_openness.pkl' ))
-    import IPython
-    IPython.embed()
-    assert False
-    raw_location = pd.read_pickle(os.path.join(path, '../', 'raw_location.pkl' ))
+
+    raw_location = pd.read_pickle(os.path.join(path, '../raw_pickle', 'raw_location.pkl' ))
     ring_comm_diff_df = read_corresponding_ring_communication(raw_location)
+    ring_comm_diff_df.to_pickle(os.path.join(path, '../', 'team_performance.pkl' ))
+
     trialed_location = trial_location(raw_location, ring_comm_diff_df)
     trialed_location.to_pickle(os.path.join(path, '../', 'trialed_location.pkl' ))
     if downsample_epoch:

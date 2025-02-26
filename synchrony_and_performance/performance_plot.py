@@ -51,9 +51,9 @@ def plot_team_global_performance(performance_df):
     ax.bar(x, averaged_y, color='#7D8598')
     ax.plot(np.array([x]*18).T, team_y, '-o', color='k', alpha=0.3,markeredgecolor='none', markersize=5)
     ax.set_xticks(x, ['Session 1', 'Session 2', 'Session 3'], font='helvetica', fontsize=12)
-    ax.set_ylim([0,12])
-    ax.set_yticks([0, 2, 4, 6, 8, 10])
-    ax.set_yticklabels([0, 2, 4, 6, 8, 10], font='helvetica', fontsize=12)
+    ax.set_ylim([0,14])
+    ax.set_yticks([0, 2, 4, 6, 8, 10, 12])
+    ax.set_yticklabels([0, 2, 4, 6, 8, 10, 12], font='helvetica', fontsize=12)
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
     print(team_y)
@@ -91,8 +91,7 @@ def plot_team_global_performance(performance_df):
 def main():
     path = '../data'
     pd.set_option('display.max_columns', None)
-    lcoation_df = pd.read_pickle(os.path.join(path, 'epoched_raw_location.pkl'))
-    performance_df = get_performance(lcoation_df)
+    performance_df = pd.read_pickle(os.path.join(path, 'team_performance.pkl'))
 
     plot_team_total_performance(performance_df)
     plot_team_global_performance(performance_df)
